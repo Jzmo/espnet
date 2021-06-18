@@ -28,7 +28,7 @@ inference_config=conf/decode_asr.yaml
     --bpe_train_text "data/${train_set}/text" \
     --token_type char \
     --lm_train_text "data/${train_set}/text" \
-    --asr_stats_dir "asr_stats_raw_en_char_espnet" \
+    --asr_stats_dir "exp/asr_stats_raw_en_char_espnet" \
     --feats-normalize null  "$@" 
 
 #data/local/other_text/text
