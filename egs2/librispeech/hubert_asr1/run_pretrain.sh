@@ -13,6 +13,8 @@ asr_config=conf/tuning/train_asr_hubert_base_960h_pretrain.yaml
 lm_config=conf/tuning/train_lm_transformer2.yaml
 inference_config=conf/decode_asr.yaml
 
+sh ./km.sh 50
+
 ./hubert_asr.sh \
     --lang en \
     --ngpu 1 \
