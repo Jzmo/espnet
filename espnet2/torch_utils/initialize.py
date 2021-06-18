@@ -73,18 +73,19 @@ def initialize(model: torch.nn.Module, init: str):
                     torch.nn.init.kaiming_normal_(p.data, nonlinearity="relu")
                 else:
                     raise ValueError("Unknown initialization: " + init)
+
         # bias init
         for p in model.parameters():
             if p.dim() == 1:
                 p.data.zero_()
-
+ 
         # reset some modules with default init
         for m in model.modules():
             if isinstance(m, (torch.nn.Embedding, torch.nn.LayerNorm)):
                 m.reset_parameters()
             if hasattr(m, "espnet_initialization_fn"):
                 m.espnet_initialization_fn()
-
+ 
         # TODO(xkc): Hacking wav2vec2 initialization
         if getattr(model, "encoder", None) and getattr(
             model.encoder, "reload_pretrained_parameters", None

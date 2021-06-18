@@ -1,0 +1,59 @@
+batch_type: numel
+batch_bins: 3200000
+accum_grad: 1
+max_epoch: 1000
+patience: none
+# The initialization method for model parameters
+init: xavier_uniform
+best_model_criterion:
+-   - valid
+    - loss
+    - min
+keep_nbest_models: 10
+
+#freeze_param: [
+#    "encoder.encoders.mask_emb", "encoder.encoders.feature_extractor",
+#    "encoder.encoders.post_extract_proj", "encoder.encoders.encoder.pos_conv",
+#    "encoder.encoders.encoder.layers.0", "encoder.encoders.encoder.layers.1", "encoder.encoders.encoder.layers.2",
+#    "encoder.encoders.encoder.layers.3", "encoder.encoders.encoder.layers.4", "encoder.encoders.encoder.layers.5",
+#    "encoder.encoders.encoder.layers.6", "encoder.encoders.encoder.layers.7", "encoder.encoders.encoder.layers.8",
+#    "encoder.encoders.encoder.layers.9", "encoder.encoders.encoder.layers.10", "encoder.encoders.encoder.layers.11",
+#    "encoder.encoders.encoder.layer_norm", "encoder.encoders.layer_norm",
+#]
+
+freeze_param: [
+    "encoder.encoders.mask_emb", "encoder.encoders.feature_extractor",
+    "encoder.encoders.post_extract_proj", "encoder.encoders.encoder.pos_conv",
+]
+
+input_size: 1
+encoder: hubert
+encoder_conf:
+    output_size: 256
+    normalize_before: false
+    freeze_finetune_updates: 10000
+    #hubert_url: espnet
+    #hubert_dir_path: exp/asr_train_asr_hubert_base_960h_pretrain_raw_en_word/
+    hubert_url: https://dl.fbaipublicfiles.com/hubert/hubert_base_ls960.pt
+    hubert_dir_path: ./downloads/hubert_pretrained_models/hubert_base_ls960.pt
+
+
+model_conf:
+    ctc_weight: 1.0
+    lsm_weight: 0.1
+    length_normalized_loss: false
+
+optim: adam
+optim_conf:
+    lr: 0.00002
+scheduler: warmuplr
+scheduler_conf:
+    warmup_steps: 1000 # 4000
+
+unused_parameters: true
+
+frontend: null
+
+normalize: null
+
+specaug: null

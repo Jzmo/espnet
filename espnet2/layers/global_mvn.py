@@ -39,6 +39,7 @@ class GlobalMVN(AbsNormalize, InversibleInterface):
 
         self.stats_file = stats_file
         stats = np.load(stats_file)
+
         if isinstance(stats, np.ndarray):
             # Kaldi like stats
             count = stats[0].flatten()[-1]

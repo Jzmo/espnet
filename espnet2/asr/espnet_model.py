@@ -146,7 +146,7 @@ class ESPnetASRModel(AbsESPnetModel):
         if self.ctc_weight == 0.0:
             loss_ctc, cer_ctc = None, None
         else:
-            loss_ctc, cer_ctc = self._calc_ctc_loss(
+            loss_ctc, cer_ctc, wer_ctc = self._calc_ctc_loss(
                 encoder_out, encoder_out_lens, text, text_lengths
             )
 
@@ -169,6 +169,7 @@ class ESPnetASRModel(AbsESPnetModel):
             cer=cer_att,
             wer=wer_att,
             cer_ctc=cer_ctc,
+            wer_ctc=wer_ctc,
         )
 
         # force_gatherable: to-device and to-tensor if scalar for DataParallel
@@ -186,7 +187,7 @@ class ESPnetASRModel(AbsESPnetModel):
         return {"feats": feats, "feats_lengths": feats_lengths}
 
     def encode(
-        self, speech: torch.Tensor, speech_lengths: torch.Tensor
+            self, speech: torch.Tensor, speech_lengths: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Frontend + Encoder. Note that this method is used by asr_inference.py
 
@@ -213,7 +214,10 @@ class ESPnetASRModel(AbsESPnetModel):
         # 4. Forward encoder
         # feats: (Batch, Length, Dim)
         # -> encoder_out: (Batch, Length2, Dim2)
-        encoder_out, encoder_out_lens, _ = self.encoder(feats, feats_lengths)
+        encoder_out, encoder_out_lens, _ = self.encoder(
+            feats,
+            feats_lengths,
+        )
 
         assert encoder_out.size(0) == speech.size(0), (
             encoder_out.size(),
@@ -259,7 +263,7 @@ class ESPnetASRModel(AbsESPnetModel):
         decoder_out, _ = self.decoder(
             encoder_out, encoder_out_lens, ys_in_pad, ys_in_lens
         )
-
+        
         # 2. Compute attention loss
         loss_att = self.criterion_att(decoder_out, ys_out_pad)
         acc_att = th_accuracy(
@@ -286,13 +290,14 @@ class ESPnetASRModel(AbsESPnetModel):
     ):
         # Calc CTC loss
         loss_ctc = self.ctc(encoder_out, encoder_out_lens, ys_pad, ys_pad_lens)
-
+        
         # Calc CER using CTC
         cer_ctc = None
+        wer_ctc = None
         if not self.training and self.error_calculator is not None:
             ys_hat = self.ctc.argmax(encoder_out).data
-            cer_ctc = self.error_calculator(ys_hat.cpu(), ys_pad.cpu(), is_ctc=True)
-        return loss_ctc, cer_ctc
+            cer_ctc, wer_ctc = self.error_calculator(ys_hat.cpu(), ys_pad.cpu())
+        return loss_ctc, cer_ctc, wer_ctc
 
     def _calc_rnnt_loss(
         self,

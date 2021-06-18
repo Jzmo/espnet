@@ -626,15 +626,15 @@ if ! "${skip_data_prep}"; then
             # The first symbol in token_list must be "<blank>" and the last must be also sos/eos:
             # 0 is reserved for CTC-blank for ASR and also used as ignore-index in the other task
             ${python} -m espnet2.bin.tokenize_text  \
-                --token_type "${token_type}" \
-                --input "${data_feats}/lm_train.txt" --output "${token_list}" ${_opts} \
-                --field 2- \
-                --cleaner "${cleaner}" \
-                --g2p "${g2p}" \
-                --write_vocabulary true \
-                --add_symbol "${blank}:0" \
-                --add_symbol "${oov}:1" \
-                --add_symbol "${sos_eos}:-1"
+                      --token_type "${token_type}" \
+                      --input "${data_feats}/lm_train.txt" --output "${token_list}" ${_opts} \
+                      --field 2- \
+                      --cleaner "${cleaner}" \
+                      --g2p "${g2p}" \
+                      --write_vocabulary true \
+                      --add_symbol "${blank}:0" \
+                      --add_symbol "${oov}:1" \
+                      --add_symbol "${sos_eos}:-1"
 
         else
             log "Error: not supported --token_type '${token_type}'"
@@ -1047,7 +1047,7 @@ if ! "${skip_train}"; then
                 --valid_data_path_and_name_and_type "${_asr_valid_dir}/text,text,text" \
                 --valid_shape_file "${asr_stats_dir}/valid/speech_shape" \
                 --valid_shape_file "${asr_stats_dir}/valid/text_shape.${token_type}" \
-                --resume true \
+                --resume false \
                 --fold_length "${_fold_length}" \
                 --fold_length "${asr_text_fold_length}" \
                 --output_dir "${asr_exp}" \

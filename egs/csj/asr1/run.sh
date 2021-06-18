@@ -21,7 +21,7 @@ seed=1          # seed to generate random number
 # feature configuration
 do_delta=false
 
-preprocess_config=conf/no_preprocess.yaml  # use conf/specaug.yaml for data augmentation
+preprocess_config=conf/specaug.yaml #conf/no_preprocess.yaml  # use conf/specaug.yaml for data augmentation
 train_config=conf/train.yaml
 lm_config=conf/lm.yaml
 decode_config=conf/decode.yaml
@@ -40,7 +40,8 @@ use_valbest_average=true     # if true, the validation `n_average`-best ASR mode
                              # if false, the last `n_average` ASR models will be averaged.
 
 # data
-CSJDATATOP=/export/corpora5/CSJ/USB
+CSJDATATOP=/ocean/projects/cis210027p/jzmo/db/CSJ/USB
+#/export/corpora5/CSJ/USB
 CSJVER=usb                          # see kaldi/egs/csj/s5/run.sh about the version
 
 # exp tag

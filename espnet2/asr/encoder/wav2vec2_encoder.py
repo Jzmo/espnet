@@ -112,7 +112,6 @@ class FairSeqWav2Vec2Encoder(AbsEncoder):
             position embedded tensor and mask
         """
         masks = make_pad_mask(ilens).to(xs_pad.device)
-
         ft = self.freeze_finetune_updates <= self.num_updates
         if self.num_updates <= self.freeze_finetune_updates:
             self.num_updates += 1

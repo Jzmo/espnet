@@ -124,6 +124,7 @@ def tokenize(
 
         line = cleaner(line)
         tokens = tokenizer.text2tokens(line)
+
         if not write_vocabulary:
             fout.write(" ".join(tokens) + "\n")
         else:
