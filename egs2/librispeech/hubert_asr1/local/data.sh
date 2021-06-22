@@ -49,12 +49,10 @@ fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     log "stage 2: Data Preparation"
-    #for part in dev-clean test-clean dev-other test-other train-clean-100 train-clean-360 train-other-500; do
+    for part in dev-clean test-clean dev-other test-other train-clean-100 train-clean-360 train-other-500; do
         # use underscore-separated names in data directories.
-        # local/data_prep.sh ${LIBRISPEECH}/LibriSpeech/${part} data/${part//-/_}
-    #done
-    local/prepare_librilight.sh ${LIBRISPEECH}/librispeech_finetuning
-    exit 0
+        local/data_prep.sh ${LIBRISPEECH}/LibriSpeech/${part} data/${part//-/_}
+    done
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then

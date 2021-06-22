@@ -1,7 +1,7 @@
 batch_type: numel
 batch_bins: 3200000
 accum_grad: 1
-max_epoch: 500
+max_epoch: 400
 patience: none
 # The initialization method for model parameters
 init: xavier_uniform
@@ -23,18 +23,19 @@ keep_nbest_models: 10
 
 freeze_param: [
     "encoder.encoders.mask_emb", "encoder.encoders.feature_extractor",
+    "encoder.encoders.post_extract_proj", "encoder.encoders.encoder.pos_conv",
 ]
 
 input_size: 1
 encoder: hubert
 encoder_conf:
-    output_size: 1024
+    output_size: 256
     normalize_before: false
     freeze_finetune_updates: 10000
-    hubert_url: espnet
-    hubert_dir_path: exp/asr_train_asr_hubert_base_960h_pretrain_raw_en_word/
-    #hubert_url: https://dl.fbaipublicfiles.com/hubert/hubert_base_ls960.pt
-    #hubert_dir_path: ./downloads/hubert_pretrained_models/hubert_base_ls960.pt
+    #hubert_url: espnet
+    #hubert_dir_path: exp/asr_train_asr_hubert_base_960h_pretrain_raw_en_word/
+    hubert_url: https://dl.fbaipublicfiles.com/hubert/hubert_base_ls960.pt
+    hubert_dir_path: ./downloads/hubert_pretrained_models/hubert_base_ls960.pt
 
 
 model_conf:
@@ -44,10 +45,11 @@ model_conf:
 
 optim: adam
 optim_conf:
-    lr: 0.0005
+    lr: 0.00002
+    
 scheduler: warmuplr
 scheduler_conf:
-    warmup_steps: 1000
+    warmup_steps: 1000 # 4000
 
 unused_parameters: true
 
@@ -57,25 +59,21 @@ normalize: null
 
 specaug: null
 
-### asr_train_asr_hubert_base_10h_finetuning_espnet_raw_en_char
+## asr_train_asr_hubert_base_10h_finetuning_last_1layer_raw_en_char
 ### WER
 
 #|dataset|Snt|Wrd|Corr|Sub|Del|Ins|Err|S.Err|
 #|---|---|---|---|---|---|---|---|---|
-#|decode_asr_asr_model_valid.loss.ave/dev_clean|2703|54402|46.1|49.6|4.4|6.8|60.7|99.9|
-#|decode_asr_asr_model_valid.loss.ave/dev_other|2864|50948|33.4|61.4|5.2|9.1|75.6|100.0|
-#|decode_asr_asr_model_valid.loss.ave/test_clean|2620|52576|46.4|49.3|4.3|7.2|60.8|99.9|
-#|decode_asr_asr_model_valid.loss.ave/test_other|2939|52343|32.0|62.4|5.6|8.9|76.9|100.0|
+#|decode_asr_asr_model_valid.loss.ave/dev_clean|2703|54402|88.7|10.9|0.4|0.7|12.0|78.5|
+#|decode_asr_asr_model_valid.loss.ave/dev_other|2864|50948|83.0|16.0|1.0|1.1|18.1|85.8|
+#|decode_asr_asr_model_valid.loss.ave/test_clean|2620|52576|88.4|11.1|0.4|0.8|12.3|78.9|
+#|decode_asr_asr_model_valid.loss.ave/test_other|2939|52343|83.0|16.0|1.0|1.3|18.3|86.9|
 
-### CER
+#### CER
 
 #|dataset|Snt|Wrd|Corr|Sub|Del|Ins|Err|S.Err|
 #|---|---|---|---|---|---|---|---|---|
-#|decode_asr_asr_model_valid.loss.ave/dev_clean|2703|288456|84.4|8.2|7.4|4.8|20.5|99.9|
-#|decode_asr_asr_model_valid.loss.ave/dev_other|2864|265951|75.8|13.8|10.4|7.1|31.3|100.0|
-#|decode_asr_asr_model_valid.loss.ave/test_clean|2620|281530|84.5|8.2|7.3|4.9|20.4|99.9|
-#|decode_asr_asr_model_valid.loss.ave/test_other|2939|272758|75.0|14.3|10.7|7.2|32.2|100.0|
-
-#2021-06-20T22:15:05 (asr.sh:1385:main) Skip the uploading stages
-#2021-06-20T22:15:05 (asr.sh:1388:main) Successfully finished. [elapsed=6745s]
-#
+#|decode_asr_asr_model_valid.loss.ave/dev_clean|2703|288456|97.5|1.4|1.2|0.9|3.4|78.5|
+#|decode_asr_asr_model_valid.loss.ave/dev_other|2864|265951|95.4|2.5|2.1|1.5|6.1|85.8|
+#|decode_asr_asr_model_valid.loss.ave/test_clean|2620|281530|97.5|1.4|1.1|0.9|3.4|78.9|
+#|decode_asr_asr_model_valid.loss.ave/test_other|2939|272758|95.5|2.5|2.1|1.5|6.1|86.9|

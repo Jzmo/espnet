@@ -73,7 +73,6 @@ def initialize(model: torch.nn.Module, init: str):
                     torch.nn.init.kaiming_normal_(p.data, nonlinearity="relu")
                 else:
                     raise ValueError("Unknown initialization: " + init)
-
         # bias init
         for p in model.parameters():
             if p.dim() == 1:
@@ -81,7 +80,7 @@ def initialize(model: torch.nn.Module, init: str):
  
         # reset some modules with default init
         for m in model.modules():
-            if isinstance(m, (torch.nn.Embedding, torch.nn.LayerNorm)):
+            if isinstance(m, (torch.nn.Embedding, torch.nn.LayerNorm, torch.nn.GroupNorm)):
                 m.reset_parameters()
             if hasattr(m, "espnet_initialization_fn"):
                 m.espnet_initialization_fn()

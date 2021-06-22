@@ -151,8 +151,9 @@ class E2E(E2ETransformer):
         ys_in_pad, ys_out_pad = add_sos_eos(
                 ys_pad, self.sos, self.eos, self.ignore_id
         )
-        cs_pad, cs_mask, loss_qua = self.cif(hs_pad, hs_mask, ys_in_pad, tf = True)
 
+        cs_pad, cs_mask, loss_qua = self.cif(hs_pad, hs_mask, ys_in_pad, tf=self.training)
+        
         # 2. forward decoder
         if self.decoder is not None:
             # non autoregressive decoder
@@ -164,17 +165,15 @@ class E2E(E2ETransformer):
             else:
                 pred_pad, pred_mask = self.decoder(cs_pad, cs_mask)
             self.pred_pad = pred_pad
-        try:
-            # 3. compute attention loss
+
+        # 3. compute attention loss
+        loss_att, self.acc = 0.0, 0.0
+        if self.training:
             loss_att = self.criterion(pred_pad, ys_out_pad)
-        except:
-            import pdb
-            
-            pdb.set_trace()
-        
-        self.acc = th_accuracy(
-            pred_pad.view(-1, self.odim), ys_out_pad, ignore_label=self.ignore_id
-        )
+
+            self.acc = th_accuracy(
+                pred_pad.view(-1, self.odim), ys_out_pad, ignore_label=self.ignore_id
+            )
 
         # 4. compute ctc loss
         loss_ctc, cer_ctc = None, None
@@ -195,7 +194,6 @@ class E2E(E2ETransformer):
         else:
             ys_hat = pred_pad.argmax(dim=-1)
             cer, wer = self.error_calculator(ys_hat.cpu(), ys_pad.cpu())
-
         alpha = self.mtlalpha
         weight_qua = self.cif_quantity_loss_weight
         if alpha == 0:
@@ -203,10 +201,11 @@ class E2E(E2ETransformer):
             loss_att_data = float(loss_att)
             loss_ctc_data = None
         else:
-            self.loss = alpha * loss_ctc  + (1 - alpha) * loss_att + weight_qua * loss_qua
+            self.loss = (1 - alpha) * loss_att + weight_qua * loss_qua + alpha * loss_ctc  
             loss_att_data = float(loss_att)
             loss_ctc_data = float(loss_ctc)
         loss_data = float(self.loss)
+        #print(f"loss_ctc:{loss_ctc.item()}, loss_att:{loss_att.item()}, loss_qua:{loss_qua.item()}")
         if loss_data < CTC_LOSS_THRESHOLD and not math.isnan(loss_data):
             self.reporter.report(
                 loss_ctc_data, loss_att_data, self.acc, cer_ctc, cer, wer, loss_data

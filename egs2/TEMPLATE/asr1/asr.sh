@@ -702,7 +702,8 @@ if ! "${skip_train}"; then
 
             # 2. Generate run.sh
             log "Generate '${lm_stats_dir}/run.sh'. You can resume the process from stage 6 using this script"
-            mkdir -p "${lm_stats_dir}"; echo "${run_args} --stage 6 \"\$@\"; exit \$?" > "${lm_stats_dir}/run.sh"; chmod +x "${lm_stats_dir}/run.sh"
+            mkdir -p "${lm_stats_dir}"; echo "${run_args} --stage 6
+ \"\$@\"; exit \$?" > "${lm_stats_dir}/run.sh"; chmod +x "${lm_stats_dir}/run.sh"
 
             # 3. Submit jobs
             log "LM collect-stats started... log: '${_logdir}/stats.*.log'"

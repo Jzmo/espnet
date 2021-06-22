@@ -77,6 +77,7 @@ def tokenize(
     add_symbol: List[str],
     cleaner: Optional[str],
     g2p: Optional[str],
+    write_word_and_count: bool,
 ):
     assert check_argument_types()
 
@@ -160,11 +161,15 @@ def tokenize(
         # e.g. idx=-1 -> append as the last symbol
         if idx < 0:
             idx = len(words_and_counts) + 1 + idx
-        words_and_counts.insert(idx, (symbol, None))
+        words_and_counts.insert(idx, (symbol, 0))
 
     # Write words
-    for w, c in words_and_counts:
-        fout.write(w + "\n")
+    if not write_word_and_count:
+        for w, c in words_and_counts:
+            fout.write(w + "\n")
+    else:
+        for w, c in words_and_counts:
+            fout.write(w + " " + str(c) + "\n")
 
     # Logging
     total_count = sum(counter.values())
@@ -263,6 +268,12 @@ def get_parser() -> argparse.ArgumentParser:
         default=[],
         action="append",
         help="Append symbol e.g. --add_symbol '<blank>:0' --add_symbol '<unk>:1'",
+    )
+    group.add_argument(
+        "--write-word-and-count",
+        type=bool,
+        default=False,
+        help="Write 'word count' to output if True, else 'word'",
     )
 
     return parser

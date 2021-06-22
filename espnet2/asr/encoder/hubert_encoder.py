@@ -21,6 +21,21 @@ from espnet.nets.pytorch_backend.nets_utils import make_pad_mask
 from espnet.nets.pytorch_backend.transformer.layer_norm import LayerNorm
 from espnet2.asr.encoder.abs_encoder import AbsEncoder
 
+try:
+    import fairseq
+    from fairseq.models.hubert.hubert import (HubertModel,
+                                              HubertConfig,
+                                              HubertPretrainingConfig,
+    )
+    from fairseq.data.dictionary import Dictionary
+except Exception as e:
+    print("Error: FairSeq is not properly installed.")
+    print(
+        "Please install FairSeq: cd ${MAIN_ROOT}/tools && make fairseq.done"
+    )
+    raise e
+
+
 class FairseqHubertEncoder(AbsEncoder):
     """FairSeq Hubert encoder module.
 
@@ -81,6 +96,7 @@ class FairseqHubertEncoder(AbsEncoder):
         try:
             import fairseq
             from fairseq.models.hubert.hubert import HubertModel
+            from fairseq.data import Dictionary
         except Exception as e:
             print("Error: FairSeq is not properly installed.")
             print(
@@ -119,20 +135,19 @@ class FairseqHubertEncoder(AbsEncoder):
             d = self.pretrained_cfg["encoder_conf"]["output_size"]
             self.pretrained_params = copy.deepcopy(state)
             
-        else:
-            
+        else:            
             self.hubert_model_path = download_hubert(hubert_url, hubert_dir_path)
 
-            #state = fairseq.checkpoint_utils.load_checkpoint_to_cpu(
-            #    self.hubert_model_path, arg_overrides=arg_overrides,
-            #)
-            #self.pretrained_cfg = state.get("cfg", None)
+            #dictionary = Dictionary.load(f"{hubert_dir_path}/dict.txt")
+            #state["task_state"] = {}
+            #state["task_state"]["target_dictionary"] = dictionary
             models, self.pretrained_cfg, task = fairseq.checkpoint_utils.load_model_ensemble_and_task(
                 [self.hubert_model_path],
                 arg_overrides=arg_overrides,
                 strict=False,
             )
             model = models[0]
+
             d = self.pretrained_cfg.model.encoder_embed_dim
             self.pretrained_params = copy.deepcopy(model.state_dict())
             
@@ -185,7 +200,7 @@ class FairseqHubertEncoder(AbsEncoder):
         """
         #print("model params:", self.encoders.encoder.layers[11].final_layer_norm.bias.sum().item())
         masks = make_pad_mask(ilens).to(xs_pad.device)
-
+        
         ft = self.freeze_finetune_updates <= self.num_updates
 
         if self.num_updates <= self.freeze_finetune_updates:
@@ -220,7 +235,6 @@ class FairseqHubertEncoder(AbsEncoder):
 
         #if self.normalize_before:
         #    xs_pad = self.after_norm(xs_pad)
-
         return xs_pad, olens, None
 
     def reload_pretrained_parameters(self):
@@ -254,9 +268,6 @@ class FairseqHubertPretrainEncoder(AbsEncoder):
         hubert_dict_dir = './',
         label_rate: int = 100,
         sample_rate: int = 16000,
-        hubert_url: str = "./",
-        hubert_dir_path: str = "./",
-
         **kwargs,
     ):
         """
@@ -300,19 +311,7 @@ class FairseqHubertPretrainEncoder(AbsEncoder):
         assert check_argument_types()
         super().__init__()
         self._output_size = output_size
-        try:
-            import fairseq
-            from fairseq.models.hubert.hubert import (HubertModel,
-                                                      HubertConfig,
-                                                      HubertPretrainingConfig,
-            )
-            from fairseq.data.dictionary import Dictionary
-        except Exception as e:
-            print("Error: FairSeq is not properly installed.")
-            print(
-                "Please install FairSeq: cd ${MAIN_ROOT}/tools && make fairseq.done"
-            )
-            raise e
+        """
         if hubert_url.startswith("http"):
             self.hubert_model_path = download_hubert(hubert_url, hubert_dir_path)
 
@@ -327,9 +326,9 @@ class FairseqHubertPretrainEncoder(AbsEncoder):
             model = models[0]
             d = self.pretrained_cfg.model.encoder_embed_dim
             self.pretrained_params = copy.deepcopy(model.state_dict())
-
+        """
         cfg_overides = {
-            "encoder_embed_dim": input_size,
+            "encoder_embed_dim": output_size,
             "encoder_ffn_embed_dim": linear_units,
             "encoder_attention_heads": attention_heads,
             "encoder_layers": num_blocks,
@@ -354,8 +353,8 @@ class FairseqHubertPretrainEncoder(AbsEncoder):
             if hasattr(hubert_task_cfg, key):
                 setattr(hubert_task_cfg, key, value)
 
-        self.dictionaries = [Dictionary.load(f"{hubert_dict_dir}")
-            if os.path.exists(f"{hubert_dict_dir}")
+        self.dictionaries = [F2E_Dictionary.load(f"{hubert_dict_dir}")
+                             if os.path.exists(f"{hubert_dict_dir}")
             else None
         ]
         self.encoder = HubertModel(self.cfg, hubert_task_cfg, self.dictionaries)        
@@ -393,9 +392,20 @@ class FairseqHubertPretrainEncoder(AbsEncoder):
 
         return enc_outputs
 
-    def reload_pretrained_parameters(self):
-        self.encoder.load_state_dict(self.pretrained_params, strict=False)
-        logging.info("Pretrained Hubert model parameters reloaded!")
+
+class F2E_Dictionary(Dictionary):
+    def __init__(
+            self,
+            *,  # begin keyword-only arguments
+            extra_special_symbols=None,
+    ):
+        self.symbols = []
+        self.count = []
+        self.indices = {}
+        if extra_special_symbols:
+            for s in extra_special_symbols:
+                self.add_symbol(s)
+        self.nspecial = len(self.symbols)
 
     
 def download_hubert(model_url, dir_path):

@@ -58,6 +58,7 @@ bpemode=unigram     # Mode of BPE (unigram or bpe).
 oov="<unk>"         # Out of vocabulary symbol.
 blank="<blank>"     # CTC blank symbol
 sos_eos="<sos/eos>" # sos and eos symbole
+pad="<pad>"         # pad symbol
 bpe_input_sentence_size=100000000 # Size of input sentence for BPE.
 bpe_nlsyms=         # non-linguistic symbols list, separated by a comma, for BPE
 bpe_char_cover=1.0  # character coverage when modeling BPE
@@ -506,7 +507,7 @@ if ! "${skip_data_prep}"; then
                 else
                     _suf=""
                 fi
-                # Generate dummy wav.scp to avoid error by copy_data_dir.sh
+ r               # Generate dummy wav.scp to avoid error by copy_data_dir.sh
                 <data/"${dset}"/cmvn.scp awk ' { print($1,"<DUMMY>") }' > data/"${dset}"/wav.scp
                 utils/copy_data_dir.sh --validate_opts --non-print data/"${dset}" "${data_feats}${_suf}/${dset}"
 
@@ -654,6 +655,7 @@ if ! "${skip_data_prep}"; then
                 --vocabulary_size "${word_vocab_size}" \
                 --add_symbol "${blank}:0" \
                 --add_symbol "${oov}:1" \
+		--add_symbol "${pad}:2" \ # Keep same to fairseq dictionary
                 --add_symbol "${sos_eos}:-1"
         fi
 

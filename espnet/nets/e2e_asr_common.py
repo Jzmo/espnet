@@ -180,7 +180,6 @@ class ErrorCalculator(object):
             if len(ref_chars) > 0:
                 cers.append(editdistance.eval(hyp_chars, ref_chars))
                 char_ref_lens.append(len(ref_chars))
-
         cer_ctc = float(sum(cers)) / sum(char_ref_lens) if cers else None
         return cer_ctc
 

@@ -6,8 +6,9 @@ set -u
 set -o pipefail
 
 train_set="train_10h"
-valid_set="dev"
-test_sets="dev_other" #"test_clean test_other dev_clean dev_other"
+valid_set="dev_other"
+test_sets="test_clean test_other dev_clean dev_other"
+
 
 asr_config=conf/tuning/train_asr_hubert_base_10h_finetuning_espnet.yaml
 lm_config=conf/tuning/train_lm_transformer2.yaml
@@ -15,7 +16,7 @@ inference_config=conf/decode_asr.yaml
 
 ./asr.sh \
     --lang en \
-    --ngpu 1 \
+    --ngpu 4 \
     --nj 4 \
     --max_wav_duration 30 \
     --asr_config "${asr_config}" \
@@ -29,6 +30,7 @@ inference_config=conf/decode_asr.yaml
     --token_type char \
     --lm_train_text "data/${train_set}/text" \
     --asr_stats_dir "exp/asr_stats_raw_en_char_espnet" \
+    --inference_asr_model valid.loss.ave.pth \
     --feats-normalize null  "$@" 
 
 #data/local/other_text/text

@@ -35,11 +35,12 @@ class Cif(nn.Module):
         self.conv = nn.Conv1d(
             channels,
             channels,
-            kernel_size=3,
+            kernel_size=5,
             stride=1,
-            padding=1,
+            padding=2,
             bias=bias,
         )
+        self.norm = nn.BatchNorm1d(channels)
         self.linear = torch.nn.Sequential(
             torch.nn.Linear(channels, 1),
             nn.Sigmoid(),
@@ -72,44 +73,44 @@ class Cif(nn.Module):
         # Linear and sigmoid activation
         xs_batch = self.linear(xs_batch.transpose(1, 2)).squeeze() # B, T
         loss_pen = xs_batch.sum(-1)
-        
-        if tf and ys_pad is not None:
+        T_y = 0
+        if ys_pad is not None:
             T_y = ys_pad.size(1)
-            loss_pen = abs(loss_pen - T_y)
+        loss_pen = abs(loss_pen - T_y)
         # cif
-        # scaleing
+        #with torch.no_grad():
         cs = []
         for x, h in zip(xs_batch, hs_pad):
             if tf:
                 x = x.squeeze() * T_y / sum(x)
             else:
                 x = x.squeeze()
-            c = self.integrate_and_fire(x, h)
+            c = self.integrate_and_fire(x, h, T_y)
             cs.append(c)
         cs = torch.nn.utils.rnn.pad_sequence(cs, batch_first=True)
         return cs, None, loss_pen.sum()
 
-    def integrate_and_fire(self, alpha, h_pad):
+    def integrate_and_fire(self, alpha, h_pad, T_y):
         assert alpha.size(0) == h_pad.size(1)
         c = []
-        alpha_accum = alpha[0]
-        h_accum = alpha[0] * h_pad[:,0]
-        for u in range(1, alpha.size(0)):
+        p_start = 0
+        alpha_accum = 0
+        h_accum = 0
+        for u in range(alpha.size(0)):
             alpha_accum = alpha_accum + alpha[u]
-            if alpha_accum < self.th:
-                h_accum = h_accum + alpha[u] * h_pad[:,u]
-            else:
+            if alpha_accum >= self.th:
                 a1 = self.th - (alpha_accum - alpha[u])
-                h_accum = h_accum + a1 * h_pad[:,u]
-                c.append(h_accum.clone())
+                h_accum = h_accum + \
+                    (alpha[p_start:u] * h_pad[:, p_start:u]).sum(-1) +\
+                    a1 * h_pad[:,u] 
+                c.append(h_accum)
                 alpha_accum = alpha[u] - a1
                 h_accum = alpha_accum * h_pad[:,u]
+                p_start = u+1
         if alpha_accum >= self.th / 2:
-            c.append(h_accum.clone())
-        try:
-            c = torch.stack(c)
-        except:
-            import pdb
-            pdb.set_trace()
+            c.append(
+                h_accum +
+                (alpha[p_start:] * h_pad[:, p_start:]).sum(-1)
+            )
+        c = torch.stack(c)
         return c
-                

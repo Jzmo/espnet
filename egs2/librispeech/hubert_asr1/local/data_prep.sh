@@ -3,7 +3,7 @@
 # Copyright 2014  Vassil Panayotov
 #           2014  Johns Hopkins University (author: Daniel Povey)
 # Apache 2.0
-set -x
+
 if [ "$#" -ne 2 ]; then
   echo "Usage: $0 <src-dir> <dst-dir>"
   echo "e.g.: $0 /export/a15/vpanayotov/data/LibriSpeech/dev-clean data/dev-clean"

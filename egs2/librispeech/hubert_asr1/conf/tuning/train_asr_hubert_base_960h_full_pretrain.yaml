@@ -36,7 +36,6 @@ encoder_conf:
     sample_rate: 16000
     hubert_dict_dir: data-bin/dict.txt
 
-
 model_conf:
     ctc_weight: 0.0
     lsm_weight: 0.1

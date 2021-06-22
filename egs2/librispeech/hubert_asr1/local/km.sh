@@ -10,7 +10,7 @@ log() {
     echo -e "$(date '+%Y-%m-%dT%H:%M:%S') (${fname}:${BASH_LINENO[0]}:${FUNCNAME[1]}) $*"
 }
 
-stage=1
+stage=3
 stop_stage=10
 train_set="train_960"
 dev_set="dev"
@@ -35,6 +35,7 @@ data_dir=${LIBRISPEECH}/LibriSpeech/
 python=python3       # Specify python to execute espnet commands.
 nj=32
 
+# generate data/train_set/...
 
 # k-means clustering
 # mfcc or hubert
@@ -48,9 +49,9 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
               --root data/${train_set} \
 	      --km-path ${_km_dir} \
 	      --n-cluster ${n_cluster} \
+	      --portion 0.1 \
 	      --nj ${nj}
 fi
-
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     log "stage 3: "
@@ -74,10 +75,26 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
 	    rm -r data/${task}_km
 	fi
 	cp -r data/${task} data/${task}_km
-	mv data/${task}_km/ptext data/${task}_km/text
+	cat data/${task}_km/ptext| sort > data/${task}_km/text
 	utils/validate_data_dir.sh --no-feats data/${task}_km || exit 1
+	rm data/${task}_km/ptext
     done
 fi
+
+
+
+#            ${python} -m espnet2.bin.tokenize_text  \
+#                      --token_type "${token_type}" \
+#                      --input "${data_feats}/lm_train.txt" --output "${token_list}" ${_opts} \
+#                      --field 2- \
+#                      --cleaner "${cleaner}" \
+#                      --g2p "${g2p}" \
+#                      --write_vocabulary true \
+#		      --write-word-and-count true \
+#                      --add_symbol "${blank}:0" \
+#                      --add_symbol "${oov}:1" \
+#                      --add_symbol "${sos_eos}:-1"
+
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     log "stage 5: "
     # generate dictionaries

@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+from random import sample
 
 import numpy as np
 import math
@@ -56,10 +57,11 @@ class MfccFeatureReader(object):
             return concat
 
 
-def get_path_iterator(wav):
+def get_path_iterator(wav, portion=0.1):
     with open(wav, "r") as f:
         #root = f.readline().rstrip()
         lines = [line.rstrip() for line in f]
+        lines = sample(lines,int(portion*len(lines)))
         def iterate():
             for line in lines:
                 utt_id, path = line.split(" ")
@@ -68,9 +70,9 @@ def get_path_iterator(wav):
         return iterate, len(lines)
     
     
-def gen_mfcc_feature(root, sample_rate, nj):
+def gen_mfcc_feature(root, sample_rate, nj, portion):
     reader = MfccFeatureReader(sample_rate)
-    generator, num = get_path_iterator(f"{root}/wav.scp")
+    generator, num = get_path_iterator(f"{root}/wav.scp", portion)
     iterator = generator()
 
     if nj > 1:
@@ -87,9 +89,9 @@ def gen_mfcc_feature(root, sample_rate, nj):
     logger.info("finished successfully")
     return np.vstack(feats)
 
-def load_feature(root, sample_rate, nj):
+def load_feature(root, sample_rate, nj, portion):
     # generate mfcc feature
-    feat = gen_mfcc_feature(root, sample_rate, nj)
+    feat = gen_mfcc_feature(root, sample_rate, nj, portion)
     # TODO, extract hubert feature
     return feat
 
@@ -132,9 +134,10 @@ def learn_kmeans(
     reassignment_ratio,
     max_no_improvement,
     sample_rate,
+    portion,
 ):
     np.random.seed(seed)
-    feat=load_feature(root, sample_rate, nj)
+    feat=load_feature(root, sample_rate, nj, portion)
     km_model = get_km_model(
         n_clusters,
         init,
@@ -170,6 +173,7 @@ if __name__ == "__main__":
     parser.add_argument("--n-init", default=20, type=int)
     parser.add_argument("--reassignment-ratio", default=0.0, type=float)
     parser.add_argument("--sample-rate", type=int, default=16000)
+    parser.add_argument("--portion", type=float, default=1.0)
     args = parser.parse_args()
     logging.info(str(args))
 

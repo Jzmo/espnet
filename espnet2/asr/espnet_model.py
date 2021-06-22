@@ -141,7 +141,14 @@ class ESPnetASRModel(AbsESPnetModel):
             loss_att, acc_att, cer_att, wer_att = self._calc_att_loss(
                 encoder_out, encoder_out_lens, text, text_lengths
             )
+        def num2str(char_list):
+            def f(yl):
+                cl = [char_list[y] for y in yl]
+                return "".join(cl).replace("<space>", " ")
 
+            return f
+        n2s = num2str(self.token_list)
+        
         # 2b. CTC branch
         if self.ctc_weight == 0.0:
             loss_ctc, cer_ctc = None, None
@@ -227,7 +234,6 @@ class ESPnetASRModel(AbsESPnetModel):
             encoder_out.size(),
             encoder_out_lens.max(),
         )
-
         return encoder_out, encoder_out_lens
 
     def _extract_feats(
@@ -290,13 +296,13 @@ class ESPnetASRModel(AbsESPnetModel):
     ):
         # Calc CTC loss
         loss_ctc = self.ctc(encoder_out, encoder_out_lens, ys_pad, ys_pad_lens)
-        
         # Calc CER using CTC
         cer_ctc = None
         wer_ctc = None
         if not self.training and self.error_calculator is not None:
             ys_hat = self.ctc.argmax(encoder_out).data
-            cer_ctc, wer_ctc = self.error_calculator(ys_hat.cpu(), ys_pad.cpu())
+            cer_ctc = self.error_calculator(ys_hat.cpu(), ys_pad.cpu(), is_ctc=True)
+
         return loss_ctc, cer_ctc, wer_ctc
 
     def _calc_rnnt_loss(

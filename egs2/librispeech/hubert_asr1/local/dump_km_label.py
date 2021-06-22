@@ -57,7 +57,7 @@ class ApplyKmeans(object):
 def dump_pseudo_label_mfcc(km_path, task, sample_rate, nj):
     apply_kmeans = ApplyKmeans(km_path)
     reader = MfccFeatureReader(sample_rate)
-    generator, num = get_path_iterator(f"{task}/wav.scp")
+    generator, num = get_path_iterator(f"{task}/wav.scp", 1.0)
     iterator = generator()
     
     if nj > 1:

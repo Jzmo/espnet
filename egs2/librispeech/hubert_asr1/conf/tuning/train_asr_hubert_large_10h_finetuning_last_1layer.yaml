@@ -34,8 +34,8 @@ encoder_conf:
     freeze_finetune_updates: 10000
     #hubert_url: espnet
     #hubert_dir_path: exp/asr_train_asr_hubert_base_960h_pretrain_raw_en_word/
-    hubert_url: https://dl.fbaipublicfiles.com/hubert/hubert_base_ls960.pt
-    hubert_dir_path: ./downloads/hubert_pretrained_models/hubert_base_ls960.pt
+    hubert_url: https://dl.fbaipublicfiles.com/hubert/hubert_large_ll60k_finetune_ls960.pt
+    hubert_dir_path: ./downloads/hubert_pretrained_models/hubert_large_ll60
 
 
 model_conf:
@@ -46,7 +46,6 @@ model_conf:
 optim: adam
 optim_conf:
     lr: 0.00002
-    
 scheduler: warmuplr
 scheduler_conf:
     warmup_steps: 1000 # 4000
