@@ -1,10 +1,10 @@
 batch_type: numel
-batch_bins: 1500000
+batch_bins: 15000000
 accum_grad: 8
 max_epoch: 100
 patience: none
 # Use self-defined function for initialization
-init: xavier_uniform # null
+init: xavier_uniform 
 best_model_criterion:
 -   - valid
     - acc
@@ -16,7 +16,7 @@ encoder: hubert_pretrain
 encoder_conf:
     output_size: 768
     linear_units: 3072
-    attention_heads: 12
+    attention_heads: 8
     num_blocks: 12
     dropout_rate: 0.1
     attention_dropout_rate: 0.0
@@ -34,10 +34,7 @@ encoder_conf:
     untie_final_proj: true
     label_rate: 100
     sample_rate: 16000
-    hubert_dict_dir: ./data-bin/dict.txt
-    hubert_url: https://dl.fbaipublicfiles.com/hubert/hubert_base_ls960.pt
-    hubert_dir_path: ./downloads/hubert_pretrained_models/hubert_base_ls960.pt
-
+    hubert_dict_dir: data-bin/dict.txt
 
 model_conf:
     ctc_weight: 0.0
@@ -52,7 +49,7 @@ optim_conf:
     lr: 0.0005
 scheduler: warmuplr
 scheduler_conf:
-    warmup_steps: 32000
+    warmup_steps: 25000
 
 unused_parameters: true
 

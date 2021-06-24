@@ -31,18 +31,23 @@ fi
 
 n_cluster=$1
 
-data_dir=${LIBRISPEECH}/LibriSpeech/
 python=python3       # Specify python to execute espnet commands.
 nj=32
 
 # generate data/train_set/...
+
+if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
+    log "Stage 1: Data preparation for data/${train_set}, data/${test_set}, etc."
+    # [Task dependent] Need to create data.sh for new corpus
+    local/data.sh 
+fi
 
 # k-means clustering
 # mfcc or hubert
 # if mfcc: check if mfcc exist, if not generate
 # if hubert: check if hubert feature exit, if not, check if hubert model exist
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
-    log "stage 2: "
+    log "stage 2: Learn K-means with MFCC feature based on scikit-learn"
     _km_dir=exp/km/${train_set}/results/
     mkdir -p ${_km_dir}
     ${python} local/sklearn_km.py \
@@ -54,7 +59,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-    log "stage 3: "
+    log "stage 4: Generate K-means pseudo label"
     _km_dir=exp/km/${train_set}/results/
     mkdir -p ${_km_dir}
     for task in ${dev_set} ${train_set} ${test_set}; do
@@ -62,13 +67,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
 		  --km-path ${_km_dir} \
 		  --recog-set data/${task} \
 		  --nj ${nj}
-    done
-fi
 
-
-if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
-    log "stage 4: "
-    for task in ${dev_set} ${train_set} ${test_set}; do
 	# move data/${task}/ to new folders and rename ptext
 	if [[ -d "data/${task}_km" ]]; then
 	    echo "data/${task}_km already exists, will remove it"
@@ -82,33 +81,23 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
 fi
 
 
-
-#            ${python} -m espnet2.bin.tokenize_text  \
-#                      --token_type "${token_type}" \
-#                      --input "${data_feats}/lm_train.txt" --output "${token_list}" ${_opts} \
-#                      --field 2- \
-#                      --cleaner "${cleaner}" \
-#                      --g2p "${g2p}" \
-#                      --write_vocabulary true \
-#		      --write-word-and-count true \
-#                      --add_symbol "${blank}:0" \
-#                      --add_symbol "${oov}:1" \
-#                      --add_symbol "${sos_eos}:-1"
-
-if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
-    log "stage 5: "
+if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
+    log "stage 5: Generate char-based fairseq style dictionary: <token> <count>"
     # generate dictionaries
     cat data/${train_set}_km/text | cut -d" " -f2- > data/${train_set}_km/train.txt
-    if [[ -d "data-bin" ]]; then
-	rm -r data-bin
-    fi    
-    python -m fairseq_cli.preprocess \
-	   --dataset-impl mmap \
-	   --trainpref  data/${train_set}_km/train.txt\
-	   --only-source  \
-	   --thresholdsrc 0
-	if [[ -e "data-bin/dict.txt" ]]; then
-	    echo "Successfully generate the data-bin/dict.txt"
+    ${python} -m espnet2.bin.tokenize_text  \
+              --token_type char \
+              --input "data/{train_set}_km/train.txt" --output "data/{train_set}_km/dict.txt" ${_opts} \
+              --field 2- \
+              --cleaner none \
+              --g2p none \
+              --write_vocabulary true \
+	      --write-word-and-count true \
+              --add_symbol "${blank}:0" \
+              --add_symbol "${oov}:1" \
+              --add_symbol "${sos_eos}:-1"
+	if [[ -e "data/{train_set}_km/dict.txt" ]]; then
+	    echo "Successfully generate the data/{train_set}_km/dict.txt"
 	fi
 fi
 

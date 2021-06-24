@@ -13,7 +13,8 @@ asr_config=conf/tuning/train_asr_hubert_base_960h_full_pretrain.yaml
 lm_config=conf/tuning/train_lm_transformer2.yaml
 inference_config=conf/decode_asr.yaml
 
-# sh ./local/km.sh 500
+
+sh ./local/km.sh 500
 
 ./hubert_asr.sh \
     --lang en \
@@ -30,8 +31,3 @@ inference_config=conf/decode_asr.yaml
     --lm_train_text "data/${train_set}/text" \
     --feats-normalize null \
     --token_type word "$@"
-
-#    --speed_perturb_factors "0.9 1.0 1.1" \
-#    --nbpe 5000 \
-#--bpe_train_text "data/${train_set}/text" "$@"
-

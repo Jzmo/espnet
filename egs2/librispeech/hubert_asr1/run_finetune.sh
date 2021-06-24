@@ -9,10 +9,11 @@ train_set="train_10h"
 valid_set="dev_other"
 test_sets="test_clean test_other dev_clean dev_other"
 
-
-asr_config=conf/tuning/train_asr_hubert_base_10h_finetuning_espnet.yaml
+asr_config=conf/tuning/train_asr_hubert_base_10h_finetuning.yaml
 lm_config=conf/tuning/train_lm_transformer2.yaml
 inference_config=conf/decode_asr.yaml
+
+local/prepare_librilight.sh ${LIBRISPEECH}/librispeech_finetuning
 
 ./asr.sh \
     --lang en \
@@ -20,7 +21,7 @@ inference_config=conf/decode_asr.yaml
     --nj 4 \
     --max_wav_duration 30 \
     --asr_config "${asr_config}" \
-    --use_lm false \
+    --use_lm true \
     --lm_config "${lm_config}" \
     --inference_config "${inference_config}" \
     --train_set "${train_set}" \
@@ -29,12 +30,6 @@ inference_config=conf/decode_asr.yaml
     --bpe_train_text "data/${train_set}/text" \
     --token_type char \
     --lm_train_text "data/${train_set}/text" \
-    --asr_stats_dir "exp/asr_stats_raw_en_char_espnet" \
     --inference_asr_model valid.loss.ave.pth \
     --feats-normalize null  "$@" 
 
-#data/local/other_text/text
-#
-
-# --speed_perturb_factors "0.9 1.0 1.1" \
-#    --nbpe 300 \
