@@ -60,7 +60,7 @@ class ConvolutionModule(nn.Module):
             x (torch.Tensor): Input tensor (#batch, time, channels).
 
         Returns:
-            torch.Tensor: Output tensor (#batch, time, channels).
+            torch.Tensor: Output tensor (#batch, time, 1).
 
         """
         # exchange the temporal dimension and the feature dimension

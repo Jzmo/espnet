@@ -111,7 +111,7 @@ class E2E(E2ETransformer):
             use_cnn_module=args.use_cnn_module,
             cnn_module_kernel=args.cnn_module_kernel,
         )
-        if self.cif_nat_decoder:
+        if False: #self.cif_nat_decoder:
             self.decoder = Decoder(
                 odim=odim,
                 attention_dim=args.adim,
@@ -153,7 +153,7 @@ class E2E(E2ETransformer):
         )
 
         cs_pad, cs_mask, loss_qua = self.cif(hs_pad, hs_mask, ys_in_pad, tf=self.training)
-        
+
         # 2. forward decoder
         if self.decoder is not None:
             # non autoregressive decoder
@@ -161,9 +161,15 @@ class E2E(E2ETransformer):
             ys_mask = None
             if not self.cif_nat_decoder:
                 ys_mask = target_mask(ys_in_pad, self.ignore_id)
+                sos_in = torch.full(cs_pad.size()[:-1], self.sos, device=ys_in_pad.device)
+                sos_mask = torch.full(ys_mask.size(), False, device=ys_mask.device)
                 pred_pad, pred_mask = self.decoder(ys_in_pad, ys_mask, cs_pad, cs_mask)
+                #pred_pad, pred_mask = self.decoder(sos_in, None, cs_pad, cs_mask)
             else:
-                pred_pad, pred_mask = self.decoder(cs_pad, cs_mask)
+                cs_mask = target_mask(cs_pad.sum(-1), 0.0)
+                #ys_mask = torch.full(ys_mask.size(), False, device=ys_mask.device)
+                pred_pad, pred_mask = self.decoder(cs_pad, cs_mask, hs_pad, hs_mask)
+                #pred_pad, pred_mask = self.decoder(cs_pad, cs_mask)
             self.pred_pad = pred_pad
 
         # 3. compute attention loss
@@ -194,6 +200,11 @@ class E2E(E2ETransformer):
         else:
             ys_hat = pred_pad.argmax(dim=-1)
             cer, wer = self.error_calculator(ys_hat.cpu(), ys_pad.cpu())
+        if not self.training:
+            print(pred_pad.argmax(dim=-1)[0])
+            print(ys_pad.cpu()[0])
+            #import pdb
+            #pdb.set_trace()
         alpha = self.mtlalpha
         weight_qua = self.cif_quantity_loss_weight
         if alpha == 0:

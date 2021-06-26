@@ -52,7 +52,7 @@ class FairseqHubertEncoder(AbsEncoder):
     def __init__(
         self,
         input_size: int, # doesn't use here
-        hubert_url: str,
+        hubert_url: str = "./",
         hubert_dir_path: str = "./",
         output_size: int = 256,
         normalize_before: bool = False,
@@ -103,13 +103,13 @@ class FairseqHubertEncoder(AbsEncoder):
                 "Please install FairSeq: cd ${MAIN_ROOT}/tools && make fairseq.done"
             )
             raise e
-
         if hubert_url == "espnet":
             self.hubert_model_path = hubert_dir_path
             s = torch.load(
                 os.path.join(self.hubert_model_path, "valid.acc.best.pth"),
                 map_location=torch.device('cpu'),
             )
+
             if all("encoder.encoder" in k for k in s):
                 try:
                     state = {
@@ -132,6 +132,7 @@ class FairseqHubertEncoder(AbsEncoder):
                 **self.pretrained_cfg["encoder_conf"]
             )
             model = model.encoder
+
             d = self.pretrained_cfg["encoder_conf"]["output_size"]
             self.pretrained_params = copy.deepcopy(state)
             

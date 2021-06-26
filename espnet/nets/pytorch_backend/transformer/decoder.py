@@ -239,7 +239,9 @@ class Decoder(BatchScorerInterface, torch.nn.Module):
             torch.Tensor: Score mask before softmax (#batch, maxlen_out).
 
         """
-        x = self.embed(tgt)
+        #x = self.embed(tgt)
+        # pedding to chagne
+        x = tgt
         x, tgt_mask, memory, memory_mask = self.decoders(
             x, tgt_mask, memory, memory_mask
         )
@@ -247,6 +249,7 @@ class Decoder(BatchScorerInterface, torch.nn.Module):
             x = self.after_norm(x)
         if self.output_layer is not None:
             x = self.output_layer(x)
+
         return x, tgt_mask
 
     def forward_one_step(self, tgt, tgt_mask, memory, cache=None):

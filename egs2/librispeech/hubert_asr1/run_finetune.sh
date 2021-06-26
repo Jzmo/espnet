@@ -13,6 +13,8 @@ asr_config=conf/tuning/train_asr_hubert_base_10h_finetuning.yaml
 lm_config=conf/tuning/train_lm_transformer2.yaml
 inference_config=conf/decode_asr.yaml
 
+. ./db.sh
+
 local/prepare_librilight.sh ${LIBRISPEECH}/librispeech_finetuning
 
 ./asr.sh \

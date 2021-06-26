@@ -2,7 +2,8 @@ import logging
 import os
 import sys
 from random import sample
-
+import warnings
+    
 import numpy as np
 import math
 
@@ -12,6 +13,8 @@ import torchaudio
 import tqdm
 
 from sklearn.cluster import MiniBatchKMeans
+from espnet2.asr.encoder.hubert_encoder import FairseqHubertEncoder
+import fairseq
 
 import joblib
 
@@ -68,6 +71,43 @@ def get_path_iterator(wav, portion=0.1):
                 yield utt_id, f"{path}"        
 
         return iterate, len(lines)
+
+class HubertFeatureReader(object):
+    def __init__(self, hubert_url, hubert_dir_path, layer, max_chunk=1600000):
+        print(hubert_url, hubert_dir_path)
+        e = FairseqHubertEncoder(0, hubert_url, hubert_dir_path).cuda()
+        self.model = e.encoders.eval()
+        self.layer = layer
+        self.max_chunk = max_chunk
+        logger.info(f" max_chunk = {self.max_chunk}")
+
+    def read_audio(self, path, ref_len=None):
+        wav, sr = sf.read(path)
+        if wav.ndim == 2:
+            wav = wav.mean(-1)
+        assert wav.ndim == 1, wav.ndim
+        if ref_len is not None and abs(ref_len - len(wav)) > 160:
+            logging.warning(f"ref {ref_len} != read {len(wav)} ({path})")
+        return wav
+
+    def get_feats(self, path, ref_len=None):
+        x = self.read_audio(path, ref_len)
+        with torch.no_grad():
+            x = torch.from_numpy(x).float().cuda()
+            #x = F.layer_norm(x, x.shape)
+            x = x.view(1, -1)
+
+            feat = []
+            for start in range(0, x.size(1), self.max_chunk):
+                x_chunk = x[:, start: start + self.max_chunk]
+                feat_chunk, _ = self.model.extract_features(
+                    source=x_chunk,
+                    padding_mask=None,
+                    mask=False,
+                    output_layer=self.layer,
+                )
+                feat.append(feat_chunk)
+            return torch.cat(feat, 1).squeeze(0)
     
     
 def gen_mfcc_feature(root, sample_rate, nj, portion):
@@ -89,9 +129,26 @@ def gen_mfcc_feature(root, sample_rate, nj, portion):
     logger.info("finished successfully")
     return np.vstack(feats)
 
-def load_feature(root, sample_rate, nj, portion):
+def gen_hubert_feature(root, sample_rate, portion, url, dir, layer):
+
+    reader = HubertFeatureReader(url, dir, layer)
+    generator, num = get_path_iterator(f"{root}/wav.scp", portion)
+    iterator = generator()
+    feats = []
+    for utt_id, path in tqdm.tqdm(iterator, total=num):
+        feat = reader.get_feats(path)
+        feats.append(feat.cpu().numpy())           
+    np.random.shuffle(feat)
+    logger.info("finished successfully")
+    return np.vstack(feats)
+
+def load_feature(root, sample_rate, nj, portion, feature, hurl, hdir):
     # generate mfcc feature
-    feat = gen_mfcc_feature(root, sample_rate, nj, portion)
+    if feature == "mfcc":
+        feat = gen_mfcc_feature(root, sample_rate, nj, portion)
+    elif "hubert" in feature:
+        hlayer = int(feature.replace("hubert", ""))
+        feat = gen_hubert_feature(root, sample_rate, portion, hurl, hdir, hlayer)
     # TODO, extract hubert feature
     return feat
 
@@ -130,14 +187,25 @@ def learn_kmeans(
     max_iter,
     batch_size,
     tol,
+    max_no_improvement,
     n_init,
     reassignment_ratio,
-    max_no_improvement,
     sample_rate,
     portion,
+    feature,
+    hurl,
+    hdir,
 ):
     np.random.seed(seed)
-    feat=load_feature(root, sample_rate, nj, portion)
+    feat=load_feature(
+        root,
+        sample_rate,
+        nj,
+        portion,
+        feature,
+        hurl,
+        hdir,
+    )
     km_model = get_km_model(
         n_clusters,
         init,
@@ -163,7 +231,7 @@ if __name__ == "__main__":
     parser.add_argument("--root", type=str, help="folder contains wav.scp for training")
     parser.add_argument("--km-path", type=str)
     parser.add_argument("--n-clusters", type=int)
-    parser.add_argument("--nj", default=1, type=int)
+    parser.add_argument("--nj", default=1, type=int, help="only support mfcc")
     parser.add_argument("--seed", default=0, type=int)
     parser.add_argument("--init", default="k-means++")
     parser.add_argument("--max-iter", default=100, type=int)
@@ -174,7 +242,12 @@ if __name__ == "__main__":
     parser.add_argument("--reassignment-ratio", default=0.0, type=float)
     parser.add_argument("--sample-rate", type=int, default=16000)
     parser.add_argument("--portion", type=float, default=1.0)
+    parser.add_argument("--feature", type=str, default="mfcc")
+    parser.add_argument("--hurl", type=str, default="./")
+    parser.add_argument("--hdir", type=str, default="./")
+    
     args = parser.parse_args()
     logging.info(str(args))
-
     learn_kmeans(**vars(args))
+    #    with warnings.filterwarnings("ignore"):
+

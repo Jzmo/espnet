@@ -14,7 +14,8 @@ import torch
 import tqdm
 import pdb
 
-from sklearn_km import (MfccFeatureReader, get_path_iterator)
+from sklearn_km import (MfccFeatureReader, get_path_iterator, HubertFeatureReader)
+
 
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
@@ -28,6 +29,7 @@ logger = logging.getLogger("dump_km_label")
 class ApplyKmeans(object):
     def __init__(self, km_path):
         self.km_model = joblib.load(km_path)
+        self.km_model = self.km_model
         self.C_np = self.km_model.cluster_centers_.transpose()
         self.Cnorm_np = (self.C_np ** 2).sum(0, keepdims=True)
 
@@ -81,11 +83,43 @@ def dump_pseudo_label_mfcc(km_path, task, sample_rate, nj):
             utt_ids.append(utt_id)
     return utt_ids, p_labs
 
-def dump_label(km_path, recog_set, sample_rate, nj):
+
+def dump_pseudo_label_hubert(km_path, task, sample_rate, url, dir, layer):
+    apply_kmeans = ApplyKmeans(km_path)
+    reader = HubertFeatureReader(url, dir, layer)
+    generator, num = get_path_iterator(f"{task}/wav.scp", 1.0)
+    iterator = generator()
+    
+    utt_ids, p_labs = [], []
+    for utt_id, path in tqdm.tqdm(iterator, total=num):
+        feat = reader.get_feats(path)
+        p_lab = apply_kmeans(feat).tolist()
+        p_labs.append(p_lab)
+        utt_ids.append(utt_id)
+    return utt_ids, p_labs
+
+
+def dump_label(km_path, recog_set, feature, nj, sample_rate, hurl, hdir):
     if recog_set:
         for task in recog_set:
             logger.info("Dumping pseudo labeling for: %s", task)
-            utt_ids, p_labs = dump_pseudo_label_mfcc(f"{km_path}/km.gz", task, sample_rate, nj)
+            if feature == "mfcc":
+                utt_ids, p_labs = dump_pseudo_label_mfcc(
+                    f"{km_path}/km.gz",
+                    task,
+                    sample_rate,
+                    nj,
+                )
+            elif "hubert" in feature:
+                hlayer = int(feature.replace("hubert", ""))
+                utt_ids, p_labs = dump_pseudo_label_hubert(
+                    f"{km_path}/km.gz",
+                    task,
+                    sample_rate,
+                    hurl,
+                    hdir,
+                    hlayer,
+                )
             with open(f"{task}/ptext", "w") as f:
                 for utt_id, p_lab in zip(utt_ids, p_labs):
                     f.write(utt_id + " " + " ".join(map(str, p_lab)) + "\n")
@@ -99,8 +133,11 @@ if __name__ == "__main__":
     parser.add_argument("--km-path", type=str)
     parser.add_argument("--recog-set", default=None,
                         nargs='+', help='folders contain wav.scp for recog')
+    parser.add_argument("--feature", default="mfcc", type=str)
     parser.add_argument("--nj", default=1, type=int)
     parser.add_argument("--sample-rate", type=int, default=16000)
+    parser.add_argument("--hurl", type=str, default="./")
+    parser.add_argument("--hdir", type=str, default="./")
     args = parser.parse_args()
     logging.info(str(args))
 

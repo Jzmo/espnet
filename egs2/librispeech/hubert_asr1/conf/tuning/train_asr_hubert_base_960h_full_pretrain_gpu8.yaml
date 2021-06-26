@@ -1,7 +1,7 @@
 batch_type: numel
 batch_bins: 15000000
-accum_grad: 8 # jzmo:try 1 later
-max_epoch: 50
+accum_grad: 1 # try 1
+max_epoch: 100
 patience: none
 # Use self-defined function for initialization
 init: xavier_uniform 
@@ -34,7 +34,7 @@ encoder_conf:
     untie_final_proj: true
     label_rate: 100
     sample_rate: 16000
-    hubert_dict_dir: data-bin/dict.txt # change to the dictionary path generated in km.sh stage 4
+    hubert_dict_dir: data-bin/dict.txt
 
 model_conf:
     ctc_weight: 0.0
