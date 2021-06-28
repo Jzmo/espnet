@@ -178,18 +178,7 @@ class E2E(ASRInterface, torch.nn.Module):
         src_mask = make_non_pad_mask(ilens.tolist()).to(xs_pad.device).unsqueeze(-2)
         hs_pad, hs_mask = self.encoder(xs_pad, src_mask)
         self.hs_pad = hs_pad
-        # 2. forward decoder
-        if self.decoder is not None:
-            ys_in_pad, ys_out_pad = add_sos_eos(
-                ys_pad, self.sos, self.eos, self.ignore_id
-            )
-            ys_mask = target_mask(ys_in_pad, self.ignore_id)
-            pred_pad, pred_mask = self.decoder(ys_in_pad, ys_mask, hs_pad, hs_mask)
-            self.pred_pad = pred_pad
-        src_mask = make_non_pad_mask(ilens.tolist()).to(xs_pad.device).unsqueeze(-2)
-        hs_pad, hs_mask = self.encoder(xs_pad, src_mask)
-        self.hs_pad = hs_pad
-
+        
         # 2. forward decoder
         if self.decoder is not None:
             ys_in_pad, ys_out_pad = add_sos_eos(

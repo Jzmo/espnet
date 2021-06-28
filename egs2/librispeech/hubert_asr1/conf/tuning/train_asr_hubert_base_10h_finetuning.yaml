@@ -1,5 +1,5 @@
 batch_type: numel
-batch_bins: 3200000
+batch_bins: 5000000
 accum_grad: 1
 max_epoch: 500
 patience: none
@@ -46,7 +46,7 @@ model_conf:
 
 optim: adam
 optim_conf:
-    lr: 0.00002 # 0.0005
+    lr: 0.0005 # 0.00002
     
 scheduler: warmuplr
 scheduler_conf:

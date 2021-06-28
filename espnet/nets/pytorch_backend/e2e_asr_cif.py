@@ -151,8 +151,15 @@ class E2E(E2ETransformer):
         ys_in_pad, ys_out_pad = add_sos_eos(
                 ys_pad, self.sos, self.eos, self.ignore_id
         )
-
-        cs_pad, cs_mask, loss_qua = self.cif(hs_pad, hs_mask, ys_in_pad, tf=self.training)
+        #parse padded ys
+        ys_list = [y[y != self.ignore_id] for y in ys_pad]
+        cs_pad, cs_mask, loss_qua = self.cif(hs_pad,
+                                             hs_mask,
+                                             ys_list,
+                                             tf=self.training,
+                                             pad_value=self.eos,
+                                             T_max=ys_out_pad.size(1)
+        )
 
         # 2. forward decoder
         if self.decoder is not None:
@@ -161,12 +168,12 @@ class E2E(E2ETransformer):
             ys_mask = None
             if not self.cif_nat_decoder:
                 ys_mask = target_mask(ys_in_pad, self.ignore_id)
-                sos_in = torch.full(cs_pad.size()[:-1], self.sos, device=ys_in_pad.device)
-                sos_mask = torch.full(ys_mask.size(), False, device=ys_mask.device)
+                #sos_in = torch.full(cs_pad.size()[:-1], self.sos, device=ys_in_pad.device)
+                #sos_mask = torch.full(ys_mask.size(), False, device=ys_mask.device)
                 pred_pad, pred_mask = self.decoder(ys_in_pad, ys_mask, cs_pad, cs_mask)
                 #pred_pad, pred_mask = self.decoder(sos_in, None, cs_pad, cs_mask)
             else:
-                cs_mask = target_mask(cs_pad.sum(-1), 0.0)
+                #cs_mask = target_mask(cs_pad.sum(-1), 0.0)
                 #ys_mask = torch.full(ys_mask.size(), False, device=ys_mask.device)
                 pred_pad, pred_mask = self.decoder(cs_pad, cs_mask, hs_pad, hs_mask)
                 #pred_pad, pred_mask = self.decoder(cs_pad, cs_mask)
@@ -195,14 +202,16 @@ class E2E(E2ETransformer):
                 self.ctc.softmax(hs_pad)
 
         # 5. compute cer/wer
-        if self.training or self.error_calculator is None or self.decoder is None:
+        if self.error_calculator is None or self.decoder is None:
             cer, wer = None, None
         else:
             ys_hat = pred_pad.argmax(dim=-1)
             cer, wer = self.error_calculator(ys_hat.cpu(), ys_pad.cpu())
         if not self.training:
+            print("===========================")
             print(pred_pad.argmax(dim=-1)[0])
-            print(ys_pad.cpu()[0])
+            print(ys_out_pad.cpu()[0])
+            print("===========================")
             #import pdb
             #pdb.set_trace()
         alpha = self.mtlalpha

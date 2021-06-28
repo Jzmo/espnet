@@ -23,8 +23,8 @@ transformer-attn-dropout-rate: 0.0
 transformer-init: pytorch
 transformer-input-layer: conv2d
 transformer-length-normalized-loss: false
-transformer-lr: 5.0
-transformer-warmup-steps: 25000
+transformer-lr: 4.0
+transformer-warmup-steps: 16000
 
 transformer-encoder-activation-type: swish
 transformer-encoder-pos-enc-layer-type: rel_pos
@@ -32,5 +32,5 @@ transformer-encoder-selfattn-layer-type: rel_selfattn
 macaron-style: true
 use-cnn-module: true
 cnn-module-kernel: 15
-cif-quantity-loss-weight: 0.5
+cif-quantity-loss-weight: 0.7
 cif-nat-decoder: True

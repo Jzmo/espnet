@@ -1040,7 +1040,7 @@ if ! "${skip_train}"; then
             --ngpu "${ngpu}" \
             --num_nodes "${num_nodes}" \
             --init_file_prefix "${asr_exp}"/.dist_init_ \
-            --multiprocessing_distributed true -- \
+            --multiprocessing_distributed false -- \
             ${python} -m espnet2.bin.hubert_train \
                 --use_preprocessor true \
                 --bpemodel "${bpemodel}" \

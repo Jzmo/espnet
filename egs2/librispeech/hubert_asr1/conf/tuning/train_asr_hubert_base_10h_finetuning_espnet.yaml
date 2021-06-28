@@ -23,6 +23,7 @@ keep_nbest_models: 10
 
 freeze_param: [
     "encoder.encoders.mask_emb", "encoder.encoders.feature_extractor",
+    "encoder.encoders.post_extract_proj", "encoder.encoders.encoder.pos_conv",
 ]
 
 input_size: 1

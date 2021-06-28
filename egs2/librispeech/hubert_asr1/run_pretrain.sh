@@ -11,11 +11,16 @@ inference_config=conf/decode_asr.yaml
 # First iteration
 fea=mfcc
 asr_config=conf/tuning/train_asr_hubert_base_960h_full_pretrain.yaml
-sh ./local/km.sh 500 ${fea}
+#sh ./local/km.sh 500 ${fea}
 
 train_set="train_960_${fea}_km"
 valid_set="dev_clean_${fea}_km"
 test_sets="test_clean_${fea}_km test_other_${fea}_km dev_clean_${fea}_km dev_other_${fea}_km"
+
+train_set="train_960_km"
+valid_set="dev_clean_km"
+test_sets="test_clean_km test_other_km dev_clean_km dev_other_km"
+
 
 ./hubert_asr.sh \
     --lang en \
