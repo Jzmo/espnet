@@ -8,9 +8,9 @@
 
 # general configuration
 backend=pytorch # chainer or pytorch
-stage=0         # start from 0 if you need to start from data preparation
-stop_stage=100
-ngpu=1          # number of gpus ("0" uses cpu, otherwise use gpu)
+stage=4         # start from 0 if you need to start from data preparation
+stop_stage=5
+ngpu=4          # number of gpus ("0" uses cpu, otherwise use gpu)
 debugmode=1
 dumpdir=dump    # directory to dump full features
 N=0             # number of minibatches to be used (mainly for debugging). "0" uses all minibatches.
@@ -22,7 +22,7 @@ seed=1          # seed to generate random number
 do_delta=false
 
 preprocess_config=conf/specaug.yaml #conf/no_preprocess.yaml  # use conf/specaug.yaml for data augmentation
-train_config=conf/train.yaml
+train_config=conf/tuning/train_pytorch_cif_conformer.yaml
 lm_config=conf/lm.yaml
 decode_config=conf/decode.yaml
 

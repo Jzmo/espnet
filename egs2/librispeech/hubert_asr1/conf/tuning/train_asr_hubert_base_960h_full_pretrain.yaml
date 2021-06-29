@@ -1,5 +1,5 @@
 batch_type: numel
-batch_bins: 160000000
+batch_bins: 32000000
 accum_grad: 8 # jzmo:try 1 later
 max_epoch: 50
 patience: none
