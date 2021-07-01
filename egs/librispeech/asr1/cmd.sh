@@ -81,8 +81,8 @@ elif [ "${cmd_backend}" = slurm ]; then
     # The devices are allocated exclusively using "${CUDA_VISIBLE_DEVICES}".
 
     export train_cmd="slurm.pl"
-    export cuda_cmd="slurm.pl --time 6:0:0 --config conf/slurm.conf"
-    export decode_cmd="slurm.pl --num-threads 32 --time 4:0:0 --config conf/slurm.conf"
+    export cuda_cmd="slurm.pl --time 48:0:0 --config conf/slurm.conf"
+    export decode_cmd="slurm.pl --time 4:0:0 --config conf/slurm.conf"
 
 elif [ "${cmd_backend}" = ssh ]; then
     # You have to create ".queue/machines" to specify the host to execute jobs.

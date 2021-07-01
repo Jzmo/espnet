@@ -22,7 +22,7 @@ resume=        # Resume the training from snapshot
 do_delta=false
 
 preprocess_config=conf/specaug.yaml
-train_config=conf/tuning/train_pytorch_cif_conformer.yaml
+train_config=conf/tuning/train_pytorch_cif_conformer_bz32.yaml
                              # if you do not have 4 gpus, please reconfigure the `batch-bins` and `accum-grad` parameters in config.
 lm_config=conf/lm.yaml
 decode_config=conf/decode.yaml
@@ -32,7 +32,7 @@ lm_resume= # specify a snapshot file to resume LM training
 lmtag=     # tag for managing LMs
 
 # decoding parameter
-recog_model=model.acc.best  # set a model to be used for decoding: 'model.acc.best' or 'model.loss.best'
+recog_model=model.loss.best  # set a model to be used for decoding: 'model.acc.best' or 'model.loss.best'
 lang_model=rnnlm.model.best # set a language model to be used for decoding
 
 # model average realted (only for transformer)
@@ -244,7 +244,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         --minibatches ${N} \
         --verbose ${verbose} \
         --resume ${resume} \
-        --train-json ${feat_tr_dir}/data_${bpemode}${nbpe}.json \
+        --train-json ${feat_sp_dir}/data_${bpemode}${nbpe}.json \
         --valid-json ${feat_dt_dir}/data_${bpemode}${nbpe}.json
 fi
 
@@ -252,6 +252,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     echo "stage 5: Decoding"
     if [[ $(get_yaml.py ${train_config} model-module) = *transformer* ]] || \
            [[ $(get_yaml.py ${train_config} model-module) = *conformer* ]] || \
+	   [[ $(get_yaml.py ${train_config} model-module) = *cif* ]] || \
            [[ $(get_yaml.py ${train_config} etype) = custom ]] || \
            [[ $(get_yaml.py ${train_config} dtype) = custom ]]; then
         # Average ASR models
@@ -267,6 +268,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --backend ${backend} \
             --snapshots ${expdir}/results/snapshot.ep.* \
             --out ${expdir}/results/${recog_model} \
+	    --metric loss\
             --num ${n_average}
 
         # Average LM models
@@ -310,9 +312,9 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --batchsize 0 \
             --recog-json ${feat_recog_dir}/split${nj}utt/data_${bpemode}${nbpe}.JOB.json \
             --result-label ${expdir}/${decode_dir}/data.JOB.json \
-            --model ${expdir}/results/${recog_model}  \
-            --rnnlm ${lmexpdir}/${lang_model} \
-            --api v2
+            --model ${expdir}/results/${recog_model} 
+        #--rnnlm ${lmexpdir}/${lang_model} \
+        #    --api v2
 
         score_sclite.sh --bpe ${nbpe} --bpemodel ${bpemodel}.model --wer true ${expdir}/${decode_dir} ${dict}
 

@@ -19,6 +19,7 @@ import torch
 
 from espnet.nets.pytorch_backend.transformer.add_sos_eos import add_sos_eos
 from espnet.nets.pytorch_backend.transformer.mask import target_mask
+from espnet.nets.pytorch_backend.transformer.dp import dynamic_matching
 
 from espnet.nets.pytorch_backend.conformer.encoder import Encoder
 from espnet.nets.pytorch_backend.conformer.argument import (
@@ -246,46 +247,76 @@ class E2E(E2ETransformer):
         :rtype: list
         """
 
-        def num2str(char_list, mask_token, mask_char="_"):
+        def num2str(char_list):
             def f(yl):
-                cl = [char_list[y] if y != mask_token else mask_char for y in yl]
+                cl = [char_list[y] for y in yl]
                 return "".join(cl).replace("<space>", " ")
 
             return f
 
-        n2s = num2str(char_list, self.mask_token)
+        n2s = num2str(char_list)
 
         self.eval()
         h = self.encode(x).unsqueeze(0)
 
-        # greedy ctc outputs
-        #ctc_probs, ctc_ids = torch.exp(self.ctc.log_softmax(h)).max(dim=-1)
-        #y_hat = torch.stack([x[0] for x in groupby(ctc_ids[0])])
-        #y_idx = torch.nonzero(y_hat != 0).squeeze(-1)
-
-
-        # todo decoder
-        # forward cif and compute quantity loss
-        cs_pad, _, _ = self.cif(h, None)
+        cs_pad, cs_mask, loss_qua = self.cif(
+            h,
+            None,
+            None,
+            tf=False,
+            pad_value=self.eos,
+            T_max=0,
+        )
 
         # 2. forward decoder
         if self.decoder is not None:
-            if self.cif_nat_deocder:
-                # non autoregressive decoder
-                pred_pad, pred_mask = self.decoder(cs_pad, None)
-                # greedy search of decoder result
-                self.pred_pad = pred_pad
-            else:
-                # autoregressive decoder
+            # non autoregressive decoder
+            # jzmo: optinally use autoregressive to help training here
+            ys_mask = None
+            if not self.cif_nat_decoder:
                 raise NotImplementedError
-
-        # todo: LM with autoregressive decoder
-        ys_hat = pred_pad.argmax(dim=-1)
-        cer, wer = self.error_calculator(ys_hat.cpu(), ys_pad.cpu())
-
-        # do lm rescoring
-
-        ret = ys_hat.tolist()[0]
+            else:
+                pred_pad, pred_mask = self.decoder(
+                    cs_pad, None, h, None
+                )
+                ys_hat_att = pred_pad.argmax(dim=-1)
+                self.pred_pad = pred_pad
+                pred_score_att, pred_id_att = torch.softmax(pred_pad[0], dim=-1).max(dim=-1)
+                
+        # greedy ctc outputs
+        ctc_probs, ctc_ids = torch.exp(self.ctc.log_softmax(h)).max(dim=-1)
+        ctc_ids = self.ctc.argmax(h.view(1, -1, self.adim)).data
+        ys_hat_ctc = torch.stack([x[0] for x in groupby(ctc_ids[0])])
+        y_idx_ctc = torch.nonzero(ys_hat_ctc != 0).squeeze(-1)
+        pred_id_ctc = ys_hat_ctc[y_idx_ctc]
+        # calculate token-level ctc probabilities by taking
+        # the maximum probability of consecutive frames with
+        # the same ctc symbols
+        pred_score_ctc = []
+        cnt = 0
+        for i, y in enumerate(ys_hat_ctc.tolist()):
+            pred_score_ctc.append(-1)
+            while cnt < ctc_ids.shape[1] and y == ctc_ids[0][cnt]:
+                if pred_score_ctc[i] < ctc_probs[0][cnt]:
+                    pred_score_ctc[i] = ctc_probs[0][cnt].item()
+                cnt += 1
+        pred_score_ctc = torch.from_numpy(numpy.array(pred_score_ctc))[y_idx_ctc]
+        ctc_weight = recog_args.ctc_weight
+        if ctc_weight > 0 and ctc_weight == 1:
+            ret = pred_id_ctc.tolist()
+        elif ctc_weight == 0:
+            ret = pred_id_att.tolist()
+        else:
+            ys_hat, ys_prob = dynamic_matching(
+                pred_id_ctc,
+                pred_id_att,
+                pred_score_ctc*ctc_weight,
+                pred_score_att*(1-ctc_weight)
+            )
+            ret = [
+                yi[0] if yp[0] > yp[1] else yi[1]
+            for yi, yp in zip(ys_hat, ys_prob)
+            ]
         hyp = {"score": 0.0, "yseq": [self.sos] + ret + [self.eos]}
 
         return [hyp]

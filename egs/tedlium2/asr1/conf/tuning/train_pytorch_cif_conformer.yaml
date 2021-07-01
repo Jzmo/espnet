@@ -10,7 +10,7 @@ dlayers: 6
 dropout-rate: 0.1
 dunits: 2048
 elayers: 12
-epochs: 80
+epochs: 50
 eunits: 1024
 grad-clip: 5
 lsm-weight: 0.1

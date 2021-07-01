@@ -64,9 +64,11 @@ def dynamic_matching(
                     ]
                     dp[i][j][2] = dp[i - 1][j][2] + [(prob1[i - 1], 0)]
                 if idx == 2:
-                    dp[i][j][1] = dp[i][j - 1][1] + [
-                        (-1, tensor2[j - 1])
-                    ]
-                    dp[i][j][2] = dp[i][j - 1][2] + [(0, prob2[j - 1])]
+                    #dp[i][j][1] = dp[i][j - 1][1] + [
+                    #    (-1, tensor2[j - 1])
+                    #]
+                    dp[i][j][1] = dp[i][j - 1][1]
+                    #dp[i][j][2] = dp[i][j - 1][2] + [(0, prob2[j - 1])]
+                    dp[i][j][2] = dp[i][j - 1][2]
 
     return dp[-1][-1][1], dp[-1][-1][2]

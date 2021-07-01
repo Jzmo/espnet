@@ -118,7 +118,7 @@ class Cif(nn.Module):
         for u in range(alpha.size(0)):
             alpha_accum = alpha_accum + alpha[u]
             #print(alpha_accum.item(), alpha[u].item())
-            if alpha_accum >= self.th - 0.1:
+            if alpha_accum >= self.th:
                 #print("cut:", alpha_accum.item())
                 a1 = self.th - (alpha_accum - alpha[u])
                 h_accum = h_accum + torch.matmul(
@@ -251,7 +251,7 @@ class Cif2(nn.Module):
         for u in range(alpha.size(0)):
             alpha_accum = alpha_accum + alpha[u]
             #print(alpha_accum.item(), alpha[u].item())
-            if alpha_accum >= self.th - 0.1:
+            if alpha_accum >= self.th:
                 #print("cut:", alpha_accum.item())
                 a1 = self.th - (alpha_accum - alpha[u])
                 h_accum = h_accum + torch.matmul(

@@ -209,7 +209,9 @@ class E2E(E2ETransformer):
             ys_hat = pred_pad.argmax(dim=-1)
             cer, wer = self.error_calculator(ys_hat.cpu(), ys_pad.cpu())
         if not self.training:
+            y_hat = [x[0] for x in groupby(ys_hat[0])]
             print("===========================")
+            print("ctc:",y_hat.cpu().data)
             print(pred_pad.argmax(dim=-1)[0])
             print(ys_out_pad.cpu()[0])
             print("===========================")
@@ -285,6 +287,7 @@ class E2E(E2ETransformer):
                 
         # greedy ctc outputs
         ctc_probs, ctc_ids = torch.exp(self.ctc.log_softmax(h)).max(dim=-1)
+        ctc_ids = self.ctc.argmax(h.view(1, -1, self.adim)).data
         ys_hat_ctc = torch.stack([x[0] for x in groupby(ctc_ids[0])])
         y_idx_ctc = torch.nonzero(ys_hat_ctc != 0).squeeze(-1)
         pred_id_ctc = ys_hat_ctc[y_idx_ctc]
@@ -301,16 +304,22 @@ class E2E(E2ETransformer):
                 cnt += 1
         pred_score_ctc = torch.from_numpy(numpy.array(pred_score_ctc))[y_idx_ctc]
         ctc_weight = recog_args.ctc_weight
-        ys_hat, ys_prob = dynamic_matching(
-            pred_id_ctc,
-            pred_id_att,
-            pred_score_ctc*ctc_weight,
-            pred_score_att*(1-ctc_weight)
-        )
-        ret = [
-            yi[0] if yp[0] > yp[1] else yi[1]
+        if ctc_weight > 0 and ctc_weight == 1:
+            ret = pred_id_ctc.tolist()
+        elif ctc_weight == 0:
+            ret = pred_id_att.tolist()
+        else:
+            ys_hat, ys_prob = dynamic_matching(
+                pred_id_ctc,
+                pred_id_att,
+                pred_score_ctc*ctc_weight,
+                pred_score_att*(1-ctc_weight)
+            )
+            ret = [
+                yi[0] if yp[0] > yp[1] else yi[1]
             for yi, yp in zip(ys_hat, ys_prob)
-        ]
+            ]
+
         hyp = {"score": 0.0, "yseq": [self.sos] + ret + [self.eos]}
 
         return [hyp]
