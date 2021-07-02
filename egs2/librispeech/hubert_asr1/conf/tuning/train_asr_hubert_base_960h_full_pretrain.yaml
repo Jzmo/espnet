@@ -1,7 +1,7 @@
 batch_type: numel
 batch_bins: 32000000
 accum_grad: 8 # jzmo:try 1 later
-max_epoch: 50
+max_epoch: 100
 patience: none
 # Use self-defined function for initialization
 init: xavier_uniform 

@@ -22,7 +22,7 @@ resume=        # Resume the training from snapshot
 do_delta=false
 
 preprocess_config=conf/specaug.yaml
-train_config=conf/tuning/train_pytorch_cif_conformer_bz32.yaml
+train_config=conf/tuning/train_pytorch_cif_conformer.yaml
                              # if you do not have 4 gpus, please reconfigure the `batch-bins` and `accum-grad` parameters in config.
 lm_config=conf/lm.yaml
 decode_config=conf/decode.yaml
@@ -32,7 +32,7 @@ lm_resume= # specify a snapshot file to resume LM training
 lmtag=     # tag for managing LMs
 
 # decoding parameter
-recog_model=model.loss.best  # set a model to be used for decoding: 'model.acc.best' or 'model.loss.best'
+recog_model=model.acc.best  # set a model to be used for decoding: 'model.acc.best' or 'model.loss.best'
 lang_model=rnnlm.model.best # set a language model to be used for decoding
 
 # model average realted (only for transformer)
@@ -69,7 +69,7 @@ set -o pipefail
 train_set=train-clean-100
 train_sp=train_sp
 train_dev=dev_clean
-recog_set="test_clean test_other dev_clean dev_other"
+recog_set="dev_clean dev_other" #"test_clean test_other dev_clean dev_other"
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
     echo "stage -1: Data Download"
@@ -268,7 +268,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --backend ${backend} \
             --snapshots ${expdir}/results/snapshot.ep.* \
             --out ${expdir}/results/${recog_model} \
-	    --metric loss\
+	    --metric cer_ctc \
             --num ${n_average}
 
         # Average LM models
@@ -312,9 +312,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --batchsize 0 \
             --recog-json ${feat_recog_dir}/split${nj}utt/data_${bpemode}${nbpe}.JOB.json \
             --result-label ${expdir}/${decode_dir}/data.JOB.json \
-            --model ${expdir}/results/${recog_model} 
-        #--rnnlm ${lmexpdir}/${lang_model} \
-        #    --api v2
+            --model ${expdir}/results/${recog_model}  
 
         score_sclite.sh --bpe ${nbpe} --bpemodel ${bpemodel}.model --wer true ${expdir}/${decode_dir} ${dict}
 

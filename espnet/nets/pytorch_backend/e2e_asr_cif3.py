@@ -28,7 +28,7 @@ from espnet.nets.pytorch_backend.conformer.argument import (
 )
 from espnet.nets.pytorch_backend.e2e_asr import CTC_LOSS_THRESHOLD
 from espnet.nets.pytorch_backend.e2e_asr_transformer import E2E as E2ETransformer
-from espnet.nets.pytorch_backend.cif.cif import Cif2
+from espnet.nets.pytorch_backend.cif.cif import Cif3
 from espnet.nets.pytorch_backend.cif.decoder import Decoder
 
 from espnet.nets.pytorch_backend.nets_utils import make_non_pad_mask
@@ -125,7 +125,7 @@ class E2E(E2ETransformer):
                 selfattention_layer_type=args.transformer_decoder_selfattn_layer_type,
             )
 
-        self.cif = Cif2(channels=args.adim, th=args.cif_threshold)
+        self.cif = Cif3(channels=args.adim, th=args.cif_threshold)
         self.reset_parameters(args)
 
     def forward(self, xs_pad, ilens, ys_pad):
@@ -152,6 +152,7 @@ class E2E(E2ETransformer):
         ys_in_pad, ys_out_pad = add_sos_eos(
                 ys_pad, self.sos, self.eos, self.ignore_id
         )
+
         #parse padded ys
         ys_list = [y[y != self.ignore_id] for y in ys_out_pad]
         cs_pad, cs_mask, loss_qua = self.cif(hs_pad,
@@ -169,15 +170,9 @@ class E2E(E2ETransformer):
             ys_mask = None
             if not self.cif_nat_decoder:
                 ys_mask = target_mask(ys_in_pad, self.ignore_id)
-                #sos_in = torch.full(cs_pad.size()[:-1], self.sos, device=ys_in_pad.device)
-                #sos_mask = torch.full(ys_mask.size(), False, device=ys_mask.device)
                 pred_pad, pred_mask = self.decoder(ys_in_pad, ys_mask, cs_pad, cs_mask)
-                #pred_pad, pred_mask = self.decoder(sos_in, None, cs_pad, cs_mask)
             else:
-                #cs_mask = target_mask(cs_pad.sum(-1), 0.0)
-                #ys_mask = torch.full(ys_mask.size(), False, device=ys_mask.device)
                 pred_pad, pred_mask = self.decoder(cs_pad, cs_mask, hs_pad, hs_mask)
-                #pred_pad, pred_mask = self.decoder(cs_pad, cs_mask)
             self.pred_pad = pred_pad
 
         # 3. compute attention loss

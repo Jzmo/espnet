@@ -273,3 +273,127 @@ class Cif2(nn.Module):
         #import pdb
         #pdb.set_trace()
         return c
+
+
+class Cif3(nn.Module):
+    """Lightweight Convolution layer.
+
+    This implementation is based on
+    https://github.com/pytorch/fairseq/tree/master/fairseq
+
+    Args:
+        wshare (int): the number of kernel of convolution
+        n_feat (int): the number of features
+        dropout_rate (float): dropout_rate
+        kernel_size (int): kernel size (length)
+        use_kernel_mask (bool): Use causal mask or not for convolution kernel
+        use_bias (bool): Use bias term or not.
+
+    """
+
+    def __init__(
+        self,
+        channels,
+        th=1.0,
+        bias=True,
+    ):
+        """Construct Lightweight Convolution layer."""
+        super(Cif3, self).__init__()
+
+        self.conv = nn.Conv1d(
+            channels,
+            channels,
+            kernel_size=5,
+            stride=1,
+            padding=2,
+            bias=bias,
+        )
+        self.norm = nn.BatchNorm1d(channels)
+        self.activation = nn.ReLU()
+        self.conv = ConvolutionModule(channels, 5)
+        self.linear = torch.nn.Sequential(
+            torch.nn.Linear(channels, 1),
+            nn.Sigmoid(),
+        )
+        self.th = th
+
+    def forward(self, hs_pad, hs_mask, ys_list=None, tf=False, pad_value=-1, T_max=None):
+        """Forward of 'Lightweight Convolution'.
+
+        This function takes query, key and value but uses only query.
+        This is just for compatibility with self-attention layer (attention.py)
+
+        Args:
+            tf: teacher-forcing
+
+        Return:
+            x (torch.Tensor): (batch, time1, d_model) ouput
+
+        """
+        # hs mask
+        B, T, C = hs_pad.size()
+
+        # lightweight conv layer and linear projection
+        xs_batch = self.conv(hs_pad)
+
+        # maybe add conv layer and relu activataion fn?
+        xs_batch = self.activation(self.norm(xs_batch.transpose(1, 2))) #(B, C, T)
+        xs_batch = self.linear(xs_batch.transpose(1, 2)).squeeze(-1) #(B, T)
+
+        if hs_mask is not None:
+            hs_mask = hs_mask.squeeze(1).eq(0)  # (batch, 1, T)
+            min_value = float(
+                numpy.finfo(torch.tensor(0, dtype=xs_batch.dtype).numpy().dtype).min
+            )
+            xs_batch = xs_batch.masked_fill(hs_mask, 0.0)
+
+        loss_pen = xs_batch.sum(1)
+
+        T_y = torch.tensor([0 for _ in range(B)])
+        if ys_list is not None:
+            T_y = torch.tensor([ys.size(0) for ys in ys_list]).to(xs_batch.device)
+            loss_pen = abs(loss_pen - T_y).sum()
+        # cif
+        #with torch.no_grad()
+        cs = []
+        if tf:
+            xs_batch = (xs_batch.transpose(0, 1) / xs_batch.sum(-1) * T_y).transpose(0, 1)
+        else:
+            xs_batch = xs_batch
+        alpha_batch = self.integrate_and_fire(xs_batch)
+        
+        cs = torch.bmm(alpha_batch, hs_pad)
+        # maske square mask to avoid attend padded tokens
+        cmax = cs.size(1)
+        cs_mask = cs.ne(pad_value).any(-1).unsqueeze(1)
+        cs_mask_tmp = cs_mask.transpose(1, 2).repeat(1, 1, cmax)
+        cs_mask = cs_mask.repeat(1, cmax, 1) & cs_mask_tmp
+
+        return cs, cs_mask, loss_pen.sum()
+
+    def integrate_and_fire(self, alphas):
+        alpha_batchs = []
+        for alpha in alphas:
+            alpha_single_batch = []
+            p_start = 0
+            alpha_accum = 0
+            alpha_b = torch.zeros((alpha.size())).to(alpha.device)
+            for u in range(alpha.size(0)):
+                alpha_accum = alpha_accum + alpha[u]
+                if alpha_accum >= self.th:
+                    a1 = self.th - (alpha_accum - alpha[u])
+                    alpha_b[p_start:u] = alpha[p_start:u]
+                    alpha_b[u] = a1
+                    alpha_single_batch.append(alpha_b)
+                    alpha_b = torch.zeros((alpha.size())).to(alpha.device)
+                    alpha_accum = alpha[u] - a1
+                    alpha_b[u] = alpha_accum
+                    p_start = u+1
+            if alpha_accum >= self.th / 2:
+                alpha_b[p_start:] = alpha[p_start:]
+                alpha_single_batch.append(alpha_b)
+            alpha_single_batch = torch.stack(alpha_single_batch)
+            alpha_batchs.append(alpha_single_batch)
+            
+        alpha_batchs = torch.nn.utils.rnn.pad_sequence(alpha_batchs, batch_first=True)
+        return alpha_batchs

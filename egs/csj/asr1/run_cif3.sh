@@ -35,7 +35,7 @@ lmtag=            # tag for managing LMs
 recog_model=model.acc.best # set a model to be used for decoding: 'model.acc.best' or 'model.loss.best'
 
 # model average realted (only for transformer)
-n_average=5                 # the number of ASR models to be averaged
+n_average=10                 # the number of ASR models to be averaged
 use_valbest_average=false     # if true, the validation `n_average`-best ASR models will be averaged.
                              # if false, the last `n_average` ASR models will be averaged.
 
@@ -58,7 +58,7 @@ set -o pipefail
 train_set_ori=train_nodup
 train_set=train_nodup_sp
 train_dev=train_dev
-recog_set="eval1 eval3"
+recog_set="eval1 eval2 eval3"
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     ### Task dependent. You have to make data the following preparation part by yourself.
@@ -229,7 +229,6 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     if [[ $(get_yaml.py ${train_config} model-module) = *transformer* ]] || \
        [[ $(get_yaml.py ${train_config} model-module) = *conformer* ]] || \
        [[ $(get_yaml.py ${train_config} model-module) = *maskctc* ]] || \
-       [[ $(get_yaml.py ${train_config} model-module) = *cif* ]] || \
        [[ $(get_yaml.py ${train_config} etype) = custom ]] || \
        [[ $(get_yaml.py ${train_config} dtype) = custom ]]; then
        average_opts=
@@ -243,7 +242,6 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --snapshots ${expdir}/results/snapshot.ep.* \
             --out ${expdir}/results/${recog_model} \
             --num ${n_average} \
-	    --metric cer_ctc \
             ${average_opts}
     fi
 

@@ -153,7 +153,7 @@ class E2E(E2ETransformer):
                 ys_pad, self.sos, self.eos, self.ignore_id
         )
         #parse padded ys
-        ys_list = [y[y != self.ignore_id] for y in ys_pad]
+        ys_list = [y[y != self.ignore_id] for y in ys_out_pad]
         cs_pad, cs_mask, loss_qua = self.cif(hs_pad,
                                              hs_mask,
                                              ys_list,
