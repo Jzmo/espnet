@@ -22,7 +22,7 @@ seed=1          # seed to generate random number
 do_delta=false
 
 preprocess_config=conf/specaug.yaml #conf/no_preprocess.yaml  # use conf/specaug.yaml for data augmentation
-train_config=conf/tuning/train_pytorch_cif_conformer.yaml
+train_config=conf/tuning/train_pytorch_cif3_conformer.yaml
 lm_config=conf/lm.yaml
 decode_config=conf/decode.yaml
 
@@ -35,7 +35,7 @@ lmtag=            # tag for managing LMs
 recog_model=model.acc.best # set a model to be used for decoding: 'model.acc.best' or 'model.loss.best'
 
 # model average realted (only for transformer)
-n_average=10                 # the number of ASR models to be averaged
+n_average=3                 # the number of ASR models to be averaged
 use_valbest_average=false     # if true, the validation `n_average`-best ASR models will be averaged.
                              # if false, the last `n_average` ASR models will be averaged.
 
@@ -229,6 +229,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     if [[ $(get_yaml.py ${train_config} model-module) = *transformer* ]] || \
        [[ $(get_yaml.py ${train_config} model-module) = *conformer* ]] || \
        [[ $(get_yaml.py ${train_config} model-module) = *maskctc* ]] || \
+       [[ $(get_yaml.py ${train_config} model-module) = *cif* ]] || \
        [[ $(get_yaml.py ${train_config} etype) = custom ]] || \
        [[ $(get_yaml.py ${train_config} dtype) = custom ]]; then
        average_opts=
@@ -242,6 +243,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --snapshots ${expdir}/results/snapshot.ep.* \
             --out ${expdir}/results/${recog_model} \
             --num ${n_average} \
+	    --metric cer \
             ${average_opts}
     fi
 

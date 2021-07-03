@@ -300,14 +300,14 @@ class Cif3(nn.Module):
         """Construct Lightweight Convolution layer."""
         super(Cif3, self).__init__()
 
-        self.conv = nn.Conv1d(
-            channels,
-            channels,
-            kernel_size=5,
-            stride=1,
-            padding=2,
-            bias=bias,
-        )
+        #self.conv = nn.Conv1d(
+        #    channels,
+        #    channels,
+        #    kernel_size=5,
+        #    stride=1,
+        #    padding=2,
+        #    bias=bias,
+        #)
         self.norm = nn.BatchNorm1d(channels)
         self.activation = nn.ReLU()
         self.conv = ConvolutionModule(channels, 5)
@@ -360,9 +360,11 @@ class Cif3(nn.Module):
             xs_batch = (xs_batch.transpose(0, 1) / xs_batch.sum(-1) * T_y).transpose(0, 1)
         else:
             xs_batch = xs_batch
+
         alpha_batch = self.integrate_and_fire(xs_batch)
         
         cs = torch.bmm(alpha_batch, hs_pad)
+
         # maske square mask to avoid attend padded tokens
         cmax = cs.size(1)
         cs_mask = cs.ne(pad_value).any(-1).unsqueeze(1)
@@ -374,26 +376,26 @@ class Cif3(nn.Module):
     def integrate_and_fire(self, alphas):
         alpha_batchs = []
         for alpha in alphas:
-            alpha_single_batch = []
             p_start = 0
             alpha_accum = 0
-            alpha_b = torch.zeros((alpha.size())).to(alpha.device)
+            max_a = round(alpha.sum(-1).item())
+            alpha_b = torch.zeros((max_a, alpha.size(-1)), device=alpha.device)
+            index_o = 0
+
             for u in range(alpha.size(0)):
                 alpha_accum = alpha_accum + alpha[u]
                 if alpha_accum >= self.th:
                     a1 = self.th - (alpha_accum - alpha[u])
-                    alpha_b[p_start:u] = alpha[p_start:u]
-                    alpha_b[u] = a1
-                    alpha_single_batch.append(alpha_b)
-                    alpha_b = torch.zeros((alpha.size())).to(alpha.device)
-                    alpha_accum = alpha[u] - a1
-                    alpha_b[u] = alpha_accum
+                    alpha_b[index_o, p_start:u] = alpha[p_start:u]
+                    alpha_b[index_o, u] = a1
                     p_start = u+1
+                    index_o += 1
+                    alpha_accum = alpha[u] - a1
+                    if index_o < max_a:
+                        alpha_b[index_o, u] = alpha_accum
             if alpha_accum >= self.th / 2:
-                alpha_b[p_start:] = alpha[p_start:]
-                alpha_single_batch.append(alpha_b)
-            alpha_single_batch = torch.stack(alpha_single_batch)
-            alpha_batchs.append(alpha_single_batch)
-            
+                alpha_b[-1, p_start:] = alpha[p_start:]    
+            alpha_batchs.append(alpha_b)
+
         alpha_batchs = torch.nn.utils.rnn.pad_sequence(alpha_batchs, batch_first=True)
         return alpha_batchs

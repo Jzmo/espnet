@@ -69,7 +69,7 @@ set -o pipefail
 train_set=train-clean-100
 train_sp=train_sp
 train_dev=dev_clean
-recog_set="dev_clean dev_other" #"test_clean test_other dev_clean dev_other"
+recog_set="test_clean test_other dev_clean dev_other"
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
     echo "stage -1: Data Download"
@@ -268,7 +268,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --backend ${backend} \
             --snapshots ${expdir}/results/snapshot.ep.* \
             --out ${expdir}/results/${recog_model} \
-	    --metric cer_ctc \
+	    --metric cer \
             --num ${n_average}
 
         # Average LM models

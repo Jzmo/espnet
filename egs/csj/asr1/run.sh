@@ -243,7 +243,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --snapshots ${expdir}/results/snapshot.ep.* \
             --out ${expdir}/results/${recog_model} \
             --num ${n_average} \
-	    --metric cer_ctc \
+	    --metric cer \
             ${average_opts}
     fi
 
